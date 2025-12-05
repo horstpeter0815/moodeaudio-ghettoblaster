@@ -1,0 +1,51 @@
+# Ghetto Blaster Custom Build - .gitignore
+
+# Build outputs
+deploy/
+*.img
+*.zip
+*.info
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Build artifacts
+pi-gen-64/
+work/
+export/
+
+# Large binary files
+*.tar.gz
+*.tar.bz2
+
+# Sensitive data
+secrets
+*.key
+*.pem
+*.crt
+
+# Keep imgbuild/.git (submodule)
+!imgbuild/.git
+
