@@ -1,0 +1,194 @@
+# moOde Audio Custom Build Project Rules
+
+## Project Overview
+This is a custom moOde Audio build project for Raspberry Pi with custom display, network, and audio configurations.
+
+## Project Structure
+- `moode-source/` - Source files for moOde modifications
+- `scripts/` - All shell scripts (organized by purpose)
+- `docs/` - Documentation files
+- `config/` - Configuration templates and files
+- `archive/` - Old/archived files (ignored by Cursor)
+
+## Coding Standards
+- **Shell Scripts:** Use bash, include error handling, add comments
+- **Python:** Use Python 3, follow PEP 8
+- **Documentation:** Markdown format, clear and concise
+- **Configuration:** Use standard Linux config formats
+
+## Key Directories
+- `/moode-source/lib/systemd/system/` - Systemd service files
+- `/moode-source/boot/firmware/` - Boot configuration (config.txt, cmdline.txt)
+- `/moode-source/www/` - moOde web interface files
+- `/moode-source/usr/local/bin/` - Custom scripts on Pi
+
+## Important System Details
+- **SSH User:** andre (UID 1000, GID 1000)
+- **Default Password:** 0815
+- **Display:** Waveshare 7.9" HDMI (400x1280 portrait, rotated to 1280x400 landscape)
+- **Audio:** HiFiBerry AMP100
+- **Network:** Ethernet (192.168.10.2) or WiFi access point
+
+## Working Configurations
+- **Display:** See `DISPLAY_CONFIG_WORKING.md`
+- **Network:** See network configuration scripts
+- **Services:** See `moode-source/lib/systemd/system/`
+
+## Build System
+- **Custom Builds:** Primary development path using `imgbuild/pi-gen-64/`
+  - Use `tools/build.sh` for build management
+  - Builds include all customizations from the start
+  - Test with Docker test suite before deployment
+- **moOde Downloads:** Reference and quick fixes
+  - Store in `downloads/` directory
+  - Apply fixes with `INSTALL_FIXES_AFTER_FLASH.sh`
+  - Use for comparison and quick testing
+
+## Deployment Process
+1. **Custom Build:** Use `tools/build.sh --deploy`
+2. **moOde Download:** Flash image, then apply fixes
+3. Mount SD card (rootfs and bootfs) if needed
+4. Copy files to appropriate locations
+5. Set permissions (sudo required)
+6. Eject and boot Pi
+7. Test connection and functionality
+
+## Testing
+- Always test on SD card before final deployment
+- Backup working configurations before changes
+- Use Docker for testing when possible
+- **Docker Test Suite:** Comprehensive test suite with multiple simulation modes
+  - `complete_test_suite.sh` - Main test suite (works with/without Docker)
+  - `START_COMPLETE_SIMULATION.sh` - Complete boot simulation
+  - `START_SYSTEM_SIMULATION_SIMPLE.sh` - System simulation
+  - `test-image-in-container.sh` - Image testing
+  - Use `./tools/test.sh --docker` for Docker simulations
+  - Use `./tools/test.sh --image` for image testing
+
+## File Naming Conventions
+- **Toolbox scripts:** `tools/[category].sh` (e.g., `tools/fix.sh`, `tools/build.sh`)
+- **Organized scripts:** `scripts/[category]/ACTION_DESCRIPTION.sh` (e.g., `scripts/network/SETUP_WIFI.sh`)
+- **Archive scripts:** `archive/scripts/YYYY-MM-DD_SCRIPT_NAME.sh` (e.g., `archive/scripts/2026-01-07_FIX_NETWORK.sh`)
+- **Root scripts:** Only toolbox launchers or legacy scripts (avoid creating new ones)
+- **Documentation:** `TOPIC_DESCRIPTION.md` (e.g., `DISPLAY_CONFIG_WORKING.md`)
+- **Services:** Use chronological order (00-, 01-, 02-) or functional names
+  - **NEVER use status-descriptive names** like "bulletproof", "guaranteed", "complete", "minimal", "direct"
+  - Use functional names: `ssh-enable.service`, `eth0-configure.service`, `network-configure.service`
+  - Or chronological: `00-boot-network-ssh.service`, `01-ssh-enable.service`, `02-eth0-configure.service`
+
+## Toolbox System - CRITICAL: USE TOOLBOX FIRST
+
+**ALWAYS use toolbox tools when available. DO NOT create new scripts in root directory.**
+
+### Toolbox Tools (Use These First):
+- **Main Tool:** `tools/toolbox.sh` - Interactive menu launcher
+- **Build/Deploy:** `tools/build.sh` - Build and deployment management
+- **Fixes:** `tools/fix.sh` - System fixes and configuration
+- **Testing:** `tools/test.sh` - Testing and validation
+- **Monitoring:** `tools/monitor.sh` - Monitoring and status checking
+- **Version:** `tools/version.sh` - Version management
+- **AI/RAG:** `tools/ai.sh` - GhettoAI knowledge base management (--status, --upload, --manifest)
+
+### Toolbox-First Policy:
+1. **Before creating any script:** Check if toolbox has this function
+2. **Before running any script:** Check if toolbox can do this
+3. **When user asks for script:** Suggest toolbox first, then organized scripts
+4. **When toolbox missing function:** Add to toolbox, don't create root script
+
+### When to Use Toolbox:
+- ✅ Building images → `cd ~/moodeaudio-cursor && ./tools/build.sh --build`
+- ✅ Fixing issues → `cd ~/moodeaudio-cursor && ./tools/fix.sh --[component]`
+- ✅ Testing systems → `cd ~/moodeaudio-cursor && ./tools/test.sh --[component]`
+- ✅ Monitoring status → `cd ~/moodeaudio-cursor && ./tools/monitor.sh --[component]`
+- ✅ Deploying → `cd ~/moodeaudio-cursor && ./tools/build.sh --deploy`
+- ✅ Interactive menu → `cd ~/moodeaudio-cursor && ./tools/toolbox.sh`
+
+### Script Organization Rules:
+1. **NEVER create scripts in root** (except toolbox launchers)
+2. **ALWAYS check toolbox first** before creating new script
+3. **ORGANIZE scripts** into appropriate directories:
+   - Network scripts → `scripts/network/` or use `tools/fix.sh --network`
+   - Build scripts → `tools/build/` or use `tools/build.sh`
+   - Fix scripts → `tools/fix/` or use `tools/fix.sh`
+   - Test scripts → `tools/test/` or use `tools/test.sh`
+   - Deployment → `scripts/deployment/` or use `tools/build.sh --deploy`
+   - Setup → `scripts/setup/` or use `tools/fix.sh --setup`
+4. **ARCHIVE old scripts** to `archive/scripts/` with date prefix (YYYY-MM-DD_SCRIPT_NAME.sh)
+
+### Common Tasks
+- **Setup:** Use `tools/fix.sh --setup` or scripts in `scripts/setup/`
+- **Deployment:** Use `tools/build.sh --deploy` or scripts in `scripts/deployment/`
+- **Fixes:** Use `tools/fix.sh --[component]` or scripts in `scripts/fixes/`
+- **Testing:** Use `tools/test.sh --[component]` for all tests
+- **Monitoring:** Use `tools/monitor.sh --[component]` for status checks
+- **Documentation:** Files in `docs/`
+
+## GhettoAI Knowledge Base Maintenance
+
+The project has a local AI assistant (GhettoAI) powered by Open WebUI + Ollama with RAG.
+
+### When to Refresh the Knowledge Base:
+- **After editing files in `rag-upload-files/`** (configs, docs, scripts, source code)
+- **After adding new documentation** to `docs/`
+- **After completing major features** that change how the system works
+- **When the agent gives outdated answers** about display/network/audio config
+
+### How to Check/Refresh:
+```bash
+# Check if refresh is needed:
+cd ~/moodeaudio-cursor && ./tools/ai.sh --status
+
+# Refresh the KB (needs token from Open WebUI):
+cd ~/moodeaudio-cursor && OPENWEBUI_TOKEN='<token>' ./tools/ai.sh --upload
+```
+
+### Getting the Token:
+1. Open http://localhost:3000 in browser
+2. Open DevTools → Console
+3. Run: `localStorage.token`
+4. Copy the value (starts with `eyJ...`)
+
+### Trigger Keywords (reminder to check KB status):
+When the user mentions: "GhettoAI", "knowledge base", "RAG", "train", "training", "AI assistant"
+→ Consider running `./tools/ai.sh --status` to check if refresh is needed.
+
+## Notes
+- Always use sudo for system file modifications
+- Backup before major changes
+- Test incrementally
+- Document all changes
+
+## Command Guidelines - CRITICAL
+- **ALWAYS provide commands that work from home directory (~/)**
+- **NEVER assume user is in project directory**
+- **EVERY terminal command must include full path or cd command**
+
+### Required Format:
+1. **Option 1 - Full path:**
+   ```bash
+   ~/moodeaudio-cursor/script.sh
+   # or
+   $HOME/moodeaudio-cursor/script.sh
+   ```
+
+2. **Option 2 - cd first (PREFERRED):**
+   ```bash
+   cd ~/moodeaudio-cursor && ./script.sh
+   ```
+
+3. **Option 3 - One-liner with cd:**
+   ```bash
+   cd ~/moodeaudio-cursor && command
+   ```
+
+### Examples:
+- ✅ CORRECT: `cd ~/moodeaudio-cursor && ./tools/build.sh`
+- ✅ CORRECT: `~/moodeaudio-cursor/tools/build.sh`
+- ❌ WRONG: `./tools/build.sh` (assumes current directory)
+- ❌ WRONG: `tools/build.sh` (assumes current directory)
+
+### For run_terminal_cmd tool:
+- Always start with `cd ~/moodeaudio-cursor &&` or use full paths
+- Make all commands copy-paste ready from home directory
+- Never rely on current working directory
+

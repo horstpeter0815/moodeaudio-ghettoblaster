@@ -1,0 +1,25 @@
+# Enable Local Display (Web UI on screen) via WebSSH
+
+# 1. Update database to enable local display
+sudo sqlite3 /var/local/www/db/moode-sqlite3.db "UPDATE cfg_system SET value='1' WHERE param='local_display';"
+
+# 2. Enable and start localdisplay service
+sudo systemctl enable localdisplay.service
+sudo systemctl start localdisplay.service
+
+# 3. Check status
+sudo systemctl status localdisplay.service
+
+# 4. Check if X server is running (required)
+echo $DISPLAY
+ps aux | grep X
+
+# 5. If X server not running, check graphical.target
+sudo systemctl status graphical.target
+
+# 6. Restart localdisplay if needed
+sudo systemctl restart localdisplay.service
+
+
+
+

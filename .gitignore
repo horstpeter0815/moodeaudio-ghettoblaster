@@ -1,51 +1,63 @@
-# Ghetto Blaster Custom Build - .gitignore
 
+!imgbuild/.git
+# Build artifacts
 # Build outputs
-deploy/
-*.img
-*.zip
-*.info
-
 # Docker
-.docker/
-docker-compose.override.yml
-
+# Ghetto Blaster Custom Build - .gitignore
+# IDE
+# Keep imgbuild/.git (submodule)
+# Large binary files
 # Logs
-*.log
-logs/
-
+# Sensitive data
 # Temporary files
-*.tmp
-*.bak
-*.swp
-*~
-
 # macOS
-.DS_Store
+*.bak
+*.crt
+*.img
+*.info
+*.key
+*.log
+*.pem
+*.sublime-*
+*.swp
+*.tar.bz2
+*.tar.gz
+*.tmp
+*.token
+*.zip
+*~
 .AppleDouble
+.DS_Store
 .LSOverride
 ._*
-
-# IDE
-.vscode/
+.docker/
+.env
+.env.local
+.ghettoai-last-upload
 .idea/
-*.sublime-*
-
-# Build artifacts
-pi-gen-64/
-work/
+.vscode/
+config.local.sh
+deploy/
+docker-compose.override.yml
 export/
-
-# Large binary files
-*.tar.gz
-*.tar.bz2
-
-# Sensitive data
+logs/
+pi-gen-64/
 secrets
-*.key
-*.pem
-*.crt
+test-password.txt
+work/
 
-# Keep imgbuild/.git (submodule)
-!imgbuild/.git
+# Large files - excluded from git
+kernel-build/
+drivers-repos/
+*.tar.xz
+*.tar.gz
+*.img
+*.dmg
 
+# Temp/build files
+.*.pid
+.action-counter
+.autonomous.pid
+
+# Large directories
+downloads/

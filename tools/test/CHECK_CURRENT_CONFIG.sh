@@ -1,0 +1,76 @@
+#!/bin/bash
+# Check Current Working Configuration on Pi
+# Run this ON THE PI via SSH
+
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  📋 CHECK CURRENT WORKING CONFIGURATION                     ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+
+echo "=== 1. DISPLAY CONFIGURATION ==="
+echo ""
+echo "config.txt (display settings):"
+grep -E 'display_rotate|fbcon|rotate|\[pi5\]' /boot/firmware/config.txt || echo "Keine Display-Rotation gefunden"
+echo ""
+echo "cmdline.txt (fbcon):"
+grep -E 'fbcon|rotate' /boot/firmware/cmdline.txt || echo "Keine fbcon Rotation gefunden"
+echo ""
+
+echo "=== 2. NETWORK CONFIGURATION ==="
+echo ""
+echo "Current IP:"
+ip addr show eth0 | grep 'inet '
+echo ""
+echo "dhcpcd.conf (eth0 section):"
+grep -A 5 'interface eth0' /etc/dhcpcd.conf || echo "Keine eth0 Config gefunden"
+echo ""
+echo "NetworkManager connections:"
+nmcli connection show 2>/dev/null | head -10 || echo "NetworkManager nicht verfügbar"
+echo ""
+
+echo "=== 3. SERVICES STATUS ==="
+echo ""
+echo "NetworkManager-wait-online:"
+systemctl is-active NetworkManager-wait-online.service || echo "Nicht aktiv"
+echo ""
+echo "cloud-init.target:"
+systemctl is-active cloud-init.target || echo "Nicht aktiv"
+echo ""
+echo "Web Server:"
+systemctl status nginx --no-pager 2>&1 | head -5 || systemctl status lighttpd --no-pager 2>&1 | head -5 || echo "Web-Server nicht gefunden"
+echo ""
+echo "Display Service:"
+systemctl status localdisplay.service --no-pager 2>&1 | head -10 || echo "localdisplay.service nicht gefunden"
+echo ""
+
+echo "=== 4. CRITICAL FILES (might be overwritten on reboot) ==="
+echo ""
+echo "config.txt headers (first 10 lines):"
+head -10 /boot/firmware/config.txt
+echo ""
+echo "worker.php (check for config.txt overwrite):"
+grep -n 'config.txt' /var/www/daemon/worker.php 2>/dev/null | head -5 || echo "worker.php nicht gefunden"
+echo ""
+echo "First-boot setup script:"
+ls -la /usr/local/bin/first-boot-setup.sh 2>/dev/null || echo "first-boot-setup.sh nicht gefunden"
+echo ""
+
+echo "=== 5. CURRENT WORKING STATE ==="
+echo ""
+echo "IP Address:"
+ip addr show eth0 | grep 'inet '
+echo ""
+echo "Display Rotation Settings:"
+cat /boot/firmware/config.txt | grep -E 'display_rotate|fbcon' || echo "Keine Rotation gefunden"
+echo ""
+echo "Web UI Status:"
+curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://localhost/ || echo "Web UI nicht erreichbar"
+echo ""
+echo "Active Display/Web Services:"
+systemctl list-units --type=service --state=running | grep -E 'localdisplay|nginx|lighttpd|chromium' | head -5 || echo "Keine gefunden"
+echo ""
+
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  ✅ CHECK COMPLETE                                          ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+
