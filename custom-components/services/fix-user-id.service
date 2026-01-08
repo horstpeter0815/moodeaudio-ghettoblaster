@@ -1,0 +1,14 @@
+[Unit]
+Description=Ghettoblaster User ID Fix (moOde requires UID 1000)
+After=multi-user.target
+After=moode-startup.service
+Wants=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "if [ \"$(id -u andre 2>/dev/null)\" != \"1000\" ]; then echo 'Fixing andre UID to 1000...'; groupadd -g 1000 andre 2>/dev/null || true; usermod -u 1000 -g 1000 andre 2>/dev/null || { userdel -r andre 2>/dev/null; groupadd -g 1000 andre; useradd -m -s /bin/bash -u 1000 -g 1000 andre; usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre; echo 'andre:0815' | chpasswd; echo 'andre ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/andre; chmod 0440 /etc/sudoers.d/andre; }; fi"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

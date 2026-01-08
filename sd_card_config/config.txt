@@ -1,0 +1,13 @@
+[pi5]
+dtoverlay=vc4-kms-v3d-pi5,noaudio
+hdmi_enable_4kp60=0
+
+[all]
+dtoverlay=vc4-kms-v3d
+hdmi_group=2
+hdmi_mode=87
+hdmi_cvt=1280 400 60 6 0 0 0
+hdmi_force_hotplug=1
+hdmi_drive=2
+display_rotate=0
+

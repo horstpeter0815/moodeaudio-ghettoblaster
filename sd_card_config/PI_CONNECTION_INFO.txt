@@ -1,0 +1,5 @@
+PI_HOSTNAME=ghettopi4.local
+PI_USER=andre
+PI_PASSWORD=0815
+PI_ALTERNATIVE_HOSTNAMES=ghettopi4,GhettoPy4.local,Ghetto Pi 4.local
+

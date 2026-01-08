@@ -1,0 +1,72 @@
+// Definitions for HiFiBerry AMP100 - Raspberry Pi 5 Compatible
+// This overlay creates a sound node instead of searching for one
+// and uses the correct I2S controller for Pi 5
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2712";
+
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			dacpro_osc: dacpro_osc {
+				compatible = "hifiberry,dacpro-clk";
+				#clock-cells = <0>;
+			};
+		};
+	};
+
+	fragment@1 {
+		// Target I2S controller on Pi 5
+		// Pi 5 uses DesignWare I2S at /axi/pcie@1000120000/rp1/i2s@a4000
+		target-path = "/axi/pcie@1000120000/rp1/i2s@a4000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@2 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			pcm5122@4d {
+				#sound-dai-cells = <0>;
+				compatible = "ti,pcm5122";
+				reg = <0x4d>;
+				clocks = <&dacpro_osc>;
+				AVDD-supply = <&vdd_3v3_reg>;
+				DVDD-supply = <&vdd_3v3_reg>;
+				CPVDD-supply = <&vdd_3v3_reg>;
+				status = "okay";
+			};
+		};
+	};
+
+	fragment@3 {
+		// Create sound node under /axi (Pi 5 structure)
+		// Instead of searching for <&sound>, we create it
+		target-path = "/axi";
+		__overlay__ {
+			sound {
+				compatible = "hifiberry,hifiberry-dacplus";
+				i2s-controller = <&i2s_a4000>;
+				status = "okay";
+				mute-gpio = <&gpio 4 0>;
+				reset-gpio = <&gpio 17 0x11>;
+			};
+		};
+	};
+
+	__overrides__ {
+		24db_digital_gain =
+			<&sound>,"hifiberry,24db_digital_gain?";
+		leds_off = <&sound>,"hifiberry-dacplus,leds_off?";
+		mute_ext_ctl = <&sound>,"hifiberry-dacplus,mute_ext_ctl:0";
+		auto_mute = <&sound>,"hifiberry-dacplus,auto_mute?";
+	};
+};
+

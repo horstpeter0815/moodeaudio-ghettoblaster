@@ -1,0 +1,29 @@
+# version: '3.8' # Obsolete in newer Docker Compose versions
+
+services:
+  moode-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    container_name: moode-builder
+    platform: linux/amd64
+    volumes:
+      - "/Users/andrevollmer/moodeaudio-cursor/imgbuild:/workspace/imgbuild"
+      - "/Users/andrevollmer/moodeaudio-cursor/custom-components:/workspace/custom-components"
+      - "/Users/andrevollmer/moodeaudio-cursor/moode-source:/workspace/moode-source:ro"
+      - build-cache:/workspace/cache
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - TZ=UTC
+      - MAKEFLAGS=-j$(nproc)
+      - DEB_BUILD_OPTIONS=parallel=$(nproc)
+      - NPROC=$(nproc)
+    stdin_open: true
+    tty: true
+    privileged: true
+    network_mode: host
+    # Resource limits removed - Docker Desktop will manage resources
+    # Using environment variables for CPU optimization instead
+
+volumes:
+  build-cache:

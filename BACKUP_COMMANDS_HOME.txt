@@ -1,0 +1,17 @@
+# Backup Working moOde Audio - From Home Directory
+
+cd ~/moodeaudio-cursor
+
+# Run backup script:
+sudo ./BACKUP_FROM_HOME.sh
+
+# Or manual backup:
+sudo mkdir -p ~/moodeaudio-cursor/moode-working-backup
+sudo rsync -av /Volumes/rootfs/etc ~/moodeaudio-cursor/moode-working-backup/
+sudo rsync -av /Volumes/rootfs/var/www/html ~/moodeaudio-cursor/moode-working-backup/
+sudo rsync -av /Volumes/rootfs/var/local/www ~/moodeaudio-cursor/moode-working-backup/
+sudo rsync -av /Volumes/rootfs/lib/systemd/system ~/moodeaudio-cursor/moode-working-backup/
+sudo rsync -av /Volumes/bootfs ~/moodeaudio-cursor/moode-working-backup/bootfs-backup
+
+echo "✅ Backup complete in: ~/moodeaudio-cursor/moode-working-backup"
+

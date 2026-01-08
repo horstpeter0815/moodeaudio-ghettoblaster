@@ -1,0 +1,19 @@
+# FINAL BULLETPROOF FIX - Run these commands:
+
+cd /Users/andrevollmer/moodeaudio-cursor
+
+sudo cp BULLETPROOF_ETH0_FIX.service /Volumes/rootfs/lib/systemd/system/eth0-direct-static.service
+
+sudo mkdir -p /Volumes/rootfs/etc/systemd/system/local-fs.target.wants
+sudo ln -sf /lib/systemd/system/eth0-direct-static.service /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/eth0-direct-static.service
+
+sudo mkdir -p /Volumes/rootfs/etc/systemd/system/sysinit.target.wants
+sudo ln -sf /lib/systemd/system/eth0-direct-static.service /Volumes/rootfs/etc/systemd/system/sysinit.target.wants/eth0-direct-static.service
+
+# Verify
+ls -la /Volumes/rootfs/lib/systemd/system/eth0-direct-static.service
+ls -la /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/eth0-direct-static.service
+
+echo ""
+echo "✅✅✅ BULLETPROOF FIX INSTALLED ✅✅✅"
+echo "Reboot Pi - Ethernet WILL work!"

@@ -1,0 +1,25 @@
+# Commands to check if WiFi worked on first boot
+
+# 1. Check IP address
+hostname -I
+ip addr show | grep "inet "
+
+# 2. Check if wpa_supplicant.conf was copied
+ls -la /boot/firmware/wpa_supplicant.conf
+ls -la /etc/wpa_supplicant/wpa_supplicant.conf
+cat /etc/wpa_supplicant/wpa_supplicant.conf | tail -10
+
+# 3. Check WiFi connection status
+sudo wpa_cli status
+ip link show wlan0
+
+# 4. Check if service ran
+systemctl status copy-wifi-config.service
+journalctl -u copy-wifi-config.service | tail -20
+
+# 5. Test connectivity
+ping -c 3 8.8.8.8
+
+
+
+

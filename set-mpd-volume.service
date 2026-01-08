@@ -1,0 +1,16 @@
+[Unit]
+Description=Set MPD Volume to 0% (Auto-Mute)
+After=mpd.service
+Wants=mpd.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 5
+ExecStart=/usr/bin/mpc volume 0
+ExecStartPost=/bin/bash -c 'sleep 10 && /usr/bin/mpc volume 0'
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

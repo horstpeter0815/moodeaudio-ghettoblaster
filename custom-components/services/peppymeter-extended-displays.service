@@ -1,0 +1,25 @@
+[Unit]
+Description=PeppyMeter Extended Displays Overlay
+After=localdisplay.service
+After=peppymeter.service
+After=mpd.service
+Wants=localdisplay.service
+Wants=peppymeter.service
+Wants=mpd.service
+Requires=graphical.target
+
+[Service]
+Type=simple
+User=andre
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/andre/.Xauthority
+ExecStartPre=/bin/bash -c 'until [ -f /tmp/.X11-unix/X0 ]; do sleep 0.5; done'
+ExecStart=/usr/local/bin/peppymeter-extended-displays.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target
+

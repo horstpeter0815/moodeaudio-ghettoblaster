@@ -1,0 +1,39 @@
+# Config.txt für Waveshare 7.9" DSI LCD auf Raspberry Pi 5
+# DSI0 (Primary DSI Port)
+# I2C0 (DIP Switches auf Display)
+
+[cm4]
+otg_mode=1
+
+[pi5]
+hdmi_enable_4kp60=0
+
+[all]
+# Basis-KMS (FKMS für DSI-Support)
+dtoverlay=vc4-fkms-v3d
+
+# Waveshare Panel Overlay - DSI0 und I2C0
+dtoverlay=vc4-kms-dsi-waveshare-panel,7_9_inch,i2c0,dsi0
+
+# I2C aktivieren
+dtparam=i2c_arm=on
+dtparam=i2c_arm_baudrate=100000
+
+# HDMI deaktivieren
+hdmi_ignore_hotplug=1
+display_auto_detect=0
+hdmi_force_hotplug=0
+hdmi_blanking=1
+
+# Framebuffer aktivieren
+fbcon=map=1
+
+# Firmware-KMS Setup aktivieren
+disable_fw_kms_setup=0
+
+# Allgemeine Einstellungen
+arm_64bit=1
+arm_boost=1
+disable_splash=1
+disable_overscan=1
+

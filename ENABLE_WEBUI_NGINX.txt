@@ -1,0 +1,18 @@
+# Enable moOde Web UI (nginx)
+
+# 1. Check if nginx is installed and status
+sudo systemctl status nginx
+
+# 2. Enable and start nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+# 3. Check if it's running
+sudo systemctl status nginx
+
+# 4. Test web UI
+curl http://127.0.1.1
+
+
+
+

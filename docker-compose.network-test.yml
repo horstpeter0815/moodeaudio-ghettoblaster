@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  network-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.network-test
+    container_name: network-test
+    volumes:
+      # Mount network mode manager
+      - "./moode-source/usr/local/bin/network-mode-manager.sh:/usr/local/bin/network-mode-manager.sh:ro"
+      # Mount service files
+      - "./moode-source/lib/systemd/system/network-mode-*.service:/lib/systemd/system/:ro"
+      # Mount test directory
+      - "./network-test:/test:rw"
+      # Mount logs
+      - "./network-test-logs:/var/log:rw"
+      # Mount boot directory (for mode selection file)
+      - "./network-test-boot:/boot/firmware:rw"
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - TZ=UTC
+    stdin_open: true
+    tty: true
+    privileged: true
+    # Required for systemd in Docker
+    cgroup_parent: docker.slice
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+      - SYS_NICE
+      - ALL
+    security_opt:
+      - apparmor:unconfined
+      - seccomp:unconfined
+    network_mode: "host"
+    tmpfs:
+      - /tmp
+      - /run
+      - /run/lock
+    # Ports for network testing
+    ports:
+      - "2222:22" # SSH
+    healthcheck:
+      test: ["CMD", "ping", "-c", "1", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+
+

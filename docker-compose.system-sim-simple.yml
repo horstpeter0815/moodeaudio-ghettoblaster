@@ -1,0 +1,32 @@
+services:
+  system-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.system-sim-simple
+    container_name: system-simulator
+    volumes:
+      # Mount all custom services
+      - "./custom-components/services:/lib/systemd/system/custom:ro"
+      # Mount all custom scripts
+      - "./custom-components/scripts:/usr/local/bin/custom:ro"
+      # Mount test directory
+      - "./system-sim-test:/test:rw"
+      # Mount logs
+      - "./system-sim-logs:/var/log/sim:rw"
+      # Mount boot directory (mock)
+      - "./system-sim-boot:/boot/firmware:rw"
+      # Mount mock moOde directory
+      - "./system-sim-moode:/var/www/daemon:rw"
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - TZ=UTC
+    stdin_open: true
+    tty: true
+    ports:
+      - "2222:22"
+    healthcheck:
+      test: ["CMD", "ping", "-c", "1", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+

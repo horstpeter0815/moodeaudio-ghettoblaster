@@ -1,0 +1,32 @@
+ROOM CORRECTION WIZARD - DEPLOYMENT FILES
+==========================================
+
+Das SSH-Passwort funktioniert nicht. Hier sind die Dateien, die du manuell auf moOde kopieren musst:
+
+DATEIEN:
+--------
+1. test-wizard/index-simple.html
+2. test-wizard/wizard-functions.js  
+3. test-wizard/snd-config.html
+4. moode-source/www/command/room-correction-wizard.php
+
+EINFACHSTE LÖSUNG:
+------------------
+1. Öffne die moOde Web-UI: https://10.10.11.39:8443/
+2. Falls du dort Zugriff auf Dateien hast, lade die Dateien hoch
+3. ODER: Kopiere die Dateien per USB-Stick/SD-Karte
+
+ALTERNATIVE: Direkt auf moOde bearbeiten
+-----------------------------------------
+Wenn du physischen Zugriff auf moOde hast:
+1. SD-Karte auslesen
+2. Dateien direkt auf SD-Karte kopieren
+3. SD-Karte wieder einstecken
+
+ODER: Passwort zurücksetzen
+----------------------------
+Am moOde-System direkt (mit Tastatur/Monitor):
+1. Login als root oder pi
+2. Passwort für 'andre' zurücksetzen: sudo passwd andre
+3. Dann SSH funktioniert wieder
+

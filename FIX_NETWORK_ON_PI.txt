@@ -1,0 +1,34 @@
+# FIX NETWORK ON PI - FÜR WEBSSH ODER SSH
+# Falls Pi erreichbar ist (auch mit 127.0.1.1), führe diese Befehle aus:
+
+# 1. Setze statische IP direkt
+sudo ip addr add 192.168.10.2/24 dev eth0
+sudo ip link set eth0 up
+sudo ip route add default via 192.168.10.1 dev eth0
+
+# 2. Prüfe IP
+ip addr show eth0
+
+# 3. Teste Verbindung
+ping -c 3 192.168.10.1
+
+# 4. Mache es permanent (NetworkManager)
+sudo nmcli connection modify "Ethernet" ipv4.addresses 192.168.10.2/24
+sudo nmcli connection modify "Ethernet" ipv4.gateway 192.168.10.1
+sudo nmcli connection modify "Ethernet" ipv4.method manual
+sudo nmcli connection up "Ethernet"
+
+# ODER systemd-networkd
+sudo mkdir -p /etc/systemd/network
+sudo tee /etc/systemd/network/10-eth0-static.network > /dev/null << 'EOF'
+[Match]
+Name=eth0
+
+[Network]
+Address=192.168.10.2/24
+Gateway=192.168.10.1
+DNS=192.168.10.1
+EOF
+
+sudo systemctl restart systemd-networkd
+

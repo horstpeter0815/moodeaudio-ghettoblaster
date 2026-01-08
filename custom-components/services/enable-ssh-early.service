@@ -1,0 +1,21 @@
+[Unit]
+Description=Ghettoblaster Enable SSH Early (Before moOde)
+# Start SO FRÜH WIE MÖGLICH - NICHT auf network-online warten!
+After=local-fs.target
+Before=network.target
+Before=moode-startup.service
+# Force start
+Conflicts=shutdown.target
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+
+Type=oneshot
+# Enable SSH very early, before moOde can disable it
+ExecStart=/bin/bash -c 'systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true && systemctl enable ssh.service 2>/dev/null || systemctl enable sshd.service 2>/dev/null || true && touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true && systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

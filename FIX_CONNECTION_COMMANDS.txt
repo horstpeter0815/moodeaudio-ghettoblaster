@@ -1,0 +1,35 @@
+# Run these commands to fix everything:
+
+cd /Users/andrevollmer/moodeaudio-cursor
+
+# 1. Create directories
+sudo mkdir -p /Volumes/rootfs/lib/systemd/system
+sudo mkdir -p /Volumes/rootfs/etc/systemd/system/local-fs.target.wants
+sudo mkdir -p /Volumes/rootfs/etc/systemd/system/multi-user.target.wants
+
+# 2. Copy Ethernet service (MISSING - THIS IS THE PROBLEM!)
+sudo cp moode-source/lib/systemd/system/eth0-direct-static.service /Volumes/rootfs/lib/systemd/system/eth0-direct-static.service
+sudo ln -sf /lib/systemd/system/eth0-direct-static.service /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/eth0-direct-static.service
+
+# 3. Enable SSH service (EXISTS but NOT ENABLED)
+sudo ln -sf /lib/systemd/system/ssh-guaranteed.service /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/ssh-guaranteed.service
+sudo ln -sf /lib/systemd/system/ssh-guaranteed.service /Volumes/rootfs/etc/systemd/system/multi-user.target.wants/ssh-guaranteed.service
+
+# 4. Copy boot-complete-minimal service
+sudo cp moode-source/lib/systemd/system/boot-complete-minimal.service /Volumes/rootfs/lib/systemd/system/boot-complete-minimal.service
+sudo ln -sf /lib/systemd/system/boot-complete-minimal.service /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/boot-complete-minimal.service
+
+# 5. Create SSH flag
+touch /Volumes/bootfs/ssh 2>/dev/null || true
+
+# Verify
+echo ""
+echo "=== VERIFICATION ==="
+ls -la /Volumes/rootfs/lib/systemd/system/eth0-direct-static.service
+ls -la /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/eth0-direct-static.service
+ls -la /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/ssh-guaranteed.service
+ls -la /Volumes/bootfs/ssh
+
+echo ""
+echo "✅ FIXED! Reboot Pi now."
+

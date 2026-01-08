@@ -1,0 +1,18 @@
+[Unit]
+Description=PeppyMeter Audio Visualizer
+After=localdisplay.service
+After=mpd.service
+Wants=localdisplay.service
+Wants=mpd.service
+
+[Service]
+Type=simple
+User=andre
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/andre/.Xauthority
+ExecStart=/usr/local/bin/peppymeter-wrapper.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

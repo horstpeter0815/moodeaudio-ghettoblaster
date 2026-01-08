@@ -1,0 +1,25 @@
+[Unit]
+Description=Independent SSH Service - Guarantees SSH is always enabled
+DefaultDependencies=no
+After=local-fs.target
+Before=sysinit.target
+Before=network.target
+Before=moode-startup.service
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/boot/firmware/ssh-activate.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+# Run multiple times for safety (redundancy)
+ExecStartPost=/bin/bash -c 'sleep 2; /boot/firmware/ssh-activate.sh'
+ExecStartPost=/bin/bash -c 'sleep 5; /boot/firmware/ssh-activate.sh'
+ExecStartPost=/bin/bash -c 'sleep 10; systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true; systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true'
+
+[Install]
+WantedBy=local-fs.target
+WantedBy=sysinit.target
+WantedBy=multi-user.target

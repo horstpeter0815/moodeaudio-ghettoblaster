@@ -1,0 +1,16 @@
+[Unit]
+Description=Audio Optimization for High-End HiFi
+After=network.target
+Before=mpd.service
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/audio-optimize.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

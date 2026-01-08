@@ -1,0 +1,34 @@
+═══════════════════════════════════════════════════════════════
+  AUTOMATIC DEPLOYMENT - EINFACHSTE METHODE
+═══════════════════════════════════════════════════════════════
+
+NACH DEM BOOTEN DES RASPBERRY PI:
+
+OPTION 1: EINZIGER SCHRITT (EINFACHSTE METHODE)
+────────────────────────────────────────────────
+1. Öffne im Browser: https://10.10.11.39:8443/
+
+2. Falls du einen File Manager oder Editor siehst:
+   - Erstelle neue Datei: deploy.php
+   - Kopiere den INHALT von INSTANT_DEPLOY.php (siehe unten)
+   - Speichere die Datei
+   - Öffne: https://10.10.11.39:8443/deploy.php
+   - Fertig! Alles wird automatisch deployed.
+
+OPTION 2: FALLS KEIN EDITOR VERFÜGBAR
+──────────────────────────────────────
+Kopiere diesen EINEN Befehl in einen Terminal (falls verfügbar):
+
+sudo cp /boot/moode_deploy/deploy-now.php /var/www/html/ && sudo chmod 644 /var/www/html/deploy-now.php
+
+Dann öffne: https://10.10.11.39:8443/deploy-now.php
+Klicke auf "Deploy Now" Button.
+
+═══════════════════════════════════════════════════════════════
+  INHALT VON INSTANT_DEPLOY.php (für Option 1):
+═══════════════════════════════════════════════════════════════
+
+Siehe Datei: INSTANT_DEPLOY.php auf dieser SD-Karte
+
+═══════════════════════════════════════════════════════════════
+

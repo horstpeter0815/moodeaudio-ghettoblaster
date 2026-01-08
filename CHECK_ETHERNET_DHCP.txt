@@ -1,0 +1,21 @@
+# Check Ethernet Connection Configuration
+
+# 1. Check connection details
+sudo nmcli connection show "Wired connection 1"
+
+# 2. Check if it's set to DHCP (method=auto)
+sudo nmcli connection show "Wired connection 1" | grep -i "ipv4.method"
+
+# 3. Try to get DHCP manually
+sudo dhclient -v eth0
+
+# 4. Check if DHCP server is responding
+sudo nmcli device show eth0
+
+# 5. Check router/DHCP server
+ping -c 3 192.168.1.1
+ping -c 3 192.168.0.1
+
+
+
+

@@ -1,0 +1,81 @@
+#!/bin/bash
+# Restore Standard Moode Configuration
+# This script restores the .xinitrc to standard Moode configuration
+
+XINITRC_PATH="/home/andre/.xinitrc"
+
+cat > "$XINITRC_PATH" << 'XINITRC_EOF'
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2014 The moOde audio player project / Tim Curtis
+#
+
+# Turn off display power management
+xset -dpms
+
+# Screensaver timeout in secs or 'off' for no timeout
+xset s 600
+
+# Capture native screen size
+fgrep "#dtoverlay=vc4-kms-v3d" /boot/firmware/config.txt
+if [ $? -ne 0 ]; then
+    SCREEN_RES=$(kmsprint | awk '$1 == "FB" {print $3}' | awk -F"x" '{print $1","$2}')
+else
+    SCREEN_RES=$(fbset -s | awk '$1 == "geometry" {print $2","$3}')
+fi
+
+# Set HDMI/DSI screen orientation
+HDMI_SCN_ORIENT=$(moodeutl -q "SELECT value FROM cfg_system WHERE param='hdmi_scn_orient'")
+DSI_SCN_TYPE=$(moodeutl -q "SELECT value FROM cfg_system WHERE param='dsi_scn_type'")
+DSI_PORT=$(moodeutl -q "SELECT value FROM cfg_system WHERE param='dsi_port'")
+DSI_SCN_ROTATE=$(moodeutl -q "SELECT value FROM cfg_system WHERE param='dsi_scn_rotate'")
+if [ $DSI_SCN_TYPE = 'none' ]; then
+    if [ $HDMI_SCN_ORIENT = "portrait" ]; then
+        SCREEN_RES=$(echo $SCREEN_RES | awk -F"," '{print $2","$1}')
+        DISPLAY=:0 xrandr --output HDMI-1 --rotate left
+    fi
+elif [ $DSI_SCN_TYPE = '2' ] || [ $DSI_SCN_TYPE = 'other' ]; then
+    if [ $DSI_SCN_ROTATE = "0" ]; then
+        DISPLAY=:0 xrandr --output DSI-$DSI_PORT --rotate normal
+    elif [ $DSI_SCN_ROTATE = "90" ]; then
+        SCREEN_RES=$(echo $SCREEN_RES | awk -F"," '{print $2","$1}')
+        DISPLAY=:0 xrandr --output DSI-$DSI_PORT --rotate right
+    elif [ $DSI_SCN_ROTATE = "180" ]; then
+        DISPLAY=:0 xrandr --output DSI-$DSI_PORT --rotate inverted
+    elif [ $DSI_SCN_ROTATE = "270" ]; then
+        SCREEN_RES=$(echo $SCREEN_RES | awk -F"," '{print $2","$1}')
+        DISPLAY=:0 xrandr --output DSI-$DSI_PORT --rotate left
+    fi
+fi
+
+# Launch WebUI or Peppy
+WEBUI_SHOW=$(moodeutl -q "SELECT value FROM cfg_system WHERE param='local_display'")
+PEPPY_SHOW=$(moodeutl -q "SELECT value FROM cfg_system WHERE param='peppy_display'")
+PEPPY_TYPE=$(moodeutl -q "SELECT value FROM cfg_system WHERE param='peppy_display_type'")
+if [ $WEBUI_SHOW = "1" ]; then
+	# Clear browser cache
+	$(/var/www/util/sysutil.sh clearbrcache)
+	# Launch chromium browser
+	chromium \
+	--app="http://localhost/" \
+	--window-size="$SCREEN_RES" \
+	--window-position="0,0" \
+	--enable-features="OverlayScrollbar" \
+	--no-first-run \
+	--disable-infobars \
+	--disable-session-crashed-bubble \
+	--kiosk &
+elif [ $PEPPY_SHOW = "1" ]; then
+	if [ $PEPPY_TYPE = 'meter' ]; then
+		cd /opt/peppymeter && python3 peppymeter.py
+	else
+		cd /opt/peppyspectrum && python3 spectrum.py
+	fi
+fi
+wait
+XINITRC_EOF
+
+chmod +x "$XINITRC_PATH"
+echo "✅ Standard Moode .xinitrc wiederhergestellt"
+

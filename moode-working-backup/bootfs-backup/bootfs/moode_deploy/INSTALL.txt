@@ -1,0 +1,22 @@
+=== INSTALLATION ===
+
+After booting moOde, run these commands via SSH:
+
+sudo cp /boot/moode_deploy/fix-index-redirect.php /var/www/html/
+sudo chown www-data:www-data /var/www/html/fix-index-redirect.php
+sudo chmod 644 /var/www/html/fix-index-redirect.php
+
+sudo cp -r /boot/moode_deploy/test-wizard /var/www/html/
+sudo chown -R www-data:www-data /var/www/html/test-wizard
+sudo chmod -R 644 /var/www/html/test-wizard/*
+
+sudo cp /boot/moode_deploy/command/room-correction-wizard.php /var/www/html/command/
+sudo chown www-data:www-data /var/www/html/command/room-correction-wizard.php
+sudo chmod 644 /var/www/html/command/room-correction-wizard.php
+
+# Fix redirect
+sudo rm /var/www/html/index.html
+
+# OR use web fix:
+# Open: https://10.10.11.39:8443/fix-index-redirect.php
+

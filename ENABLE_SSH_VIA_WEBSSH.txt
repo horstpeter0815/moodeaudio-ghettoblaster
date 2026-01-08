@@ -1,0 +1,14 @@
+# ENABLE SSH VIA WEBSSH
+# Öffne: http://192.168.1.101:4200
+# Kopiere und füge diese Befehle ein:
+
+sudo systemctl enable ssh
+sudo systemctl start ssh
+sudo touch /boot/firmware/ssh
+sudo chmod 644 /boot/firmware/ssh
+echo "✅ SSH aktiviert"
+
+# Dann teste SSH:
+# ssh pi@192.168.1.101
+# Passwort: moodeaudio
+

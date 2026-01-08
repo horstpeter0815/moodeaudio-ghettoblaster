@@ -1,0 +1,56 @@
+# FIX NETWORK VIA SSH - Copy these commands
+
+# 1. Check current network status
+echo "=== Current Network Status ==="
+ip addr show
+hostname -I
+ip route show
+
+# 2. Check WiFi status
+echo ""
+echo "=== WiFi Status ==="
+sudo wpa_cli status
+sudo iwconfig wlan0 2>/dev/null || echo "wlan0 not found"
+
+# 3. Check if wpa_supplicant.conf exists and content
+echo ""
+echo "=== WiFi Configuration Files ==="
+ls -la /boot/firmware/wpa_supplicant.conf 2>/dev/null || echo "No wpa_supplicant.conf on boot partition"
+ls -la /etc/wpa_supplicant/wpa_supplicant.conf 2>/dev/null || echo "No wpa_supplicant.conf in /etc"
+cat /etc/wpa_supplicant/wpa_supplicant.conf 2>/dev/null | tail -20
+
+# 4. Configure WiFi manually
+echo ""
+echo "=== Configure WiFi ==="
+sudo tee -a /etc/wpa_supplicant/wpa_supplicant.conf > /dev/null << 'EOF'
+
+network={
+    ssid="Centara Nova Hotel"
+    psk="password"
+    key_mgmt=WPA2-PSK
+}
+EOF
+
+# 5. Restart WiFi
+sudo wpa_cli -i wlan0 reconfigure
+sudo systemctl restart wpa_supplicant
+sudo systemctl restart networking
+
+# 6. Check Ethernet (if cable connected)
+echo ""
+echo "=== Ethernet Status ==="
+ip addr show eth0
+sudo dhclient eth0 2>/dev/null || sudo systemctl restart dhcpcd
+
+# 7. Check IP addresses again
+echo ""
+echo "=== Network Status After Fix ==="
+hostname -I
+ip addr show | grep "inet "
+
+# 8. Test connectivity
+ping -c 3 8.8.8.8
+
+
+
+

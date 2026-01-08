@@ -1,0 +1,27 @@
+# Fix Ethernet - Run these in WebSSH
+
+# 1. Check if Ethernet interface exists
+ip link show eth0
+
+# 2. Check if Ethernet has link (cable connected)
+ethtool eth0 | grep "Link detected"
+
+# 3. Try to get DHCP address
+sudo dhclient -v eth0
+
+# 4. Check if NetworkManager is running
+sudo systemctl status NetworkManager
+
+# 5. Restart NetworkManager
+sudo systemctl restart NetworkManager
+
+# 6. Check IP address
+ip addr show eth0
+
+# 7. Try manual IP (temporary test)
+sudo ip addr add 192.168.1.100/24 dev eth0
+sudo ip link set eth0 up
+
+
+
+

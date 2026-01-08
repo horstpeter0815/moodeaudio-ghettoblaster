@@ -1,0 +1,107 @@
+==========================================
+  DIREKTE INSTALLATIONS-BEFEHLE
+  Kopiere diese Befehle direkt auf die Pis
+==========================================
+
+PI 1 (RaspiOS - 192.168.178.62):
+---------------------------------
+
+# Auf Pi 1 ausführen:
+sudo bash -c '
+# Backup
+cp /boot/firmware/config.txt /boot/firmware/config.txt.backup-$(date +%Y%m%d-%H%M%S)
+
+# FT6236 auskommentieren
+sed -i "s/^dtoverlay=ft6236/#dtoverlay=ft6236/" /boot/firmware/config.txt
+
+# Service erstellen
+cat > /etc/systemd/system/ft6236-delay.service << "EOF"
+[Unit]
+Description=Load FT6236 touchscreen after display
+After=graphical.target
+After=localdisplay.service
+Wants=localdisplay.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "sleep 3 && modprobe ft6236"
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target
+EOF
+
+# Aktivieren
+systemctl daemon-reload
+systemctl enable ft6236-delay.service
+systemctl start ft6236-delay.service
+
+echo "✅ Installation abgeschlossen auf Pi 1"
+'
+
+# Reboot
+sudo reboot
+
+
+PI 2 (moOde - 192.168.178.178):
+--------------------------------
+
+# Auf Pi 2 ausführen:
+sudo bash -c '
+# Backup
+cp /boot/firmware/config.txt /boot/firmware/config.txt.backup-$(date +%Y%m%d-%H%M%S)
+
+# FT6236 auskommentieren
+sed -i "s/^dtoverlay=ft6236/#dtoverlay=ft6236/" /boot/firmware/config.txt
+
+# Service erstellen
+cat > /etc/systemd/system/ft6236-delay.service << "EOF"
+[Unit]
+Description=Load FT6236 touchscreen after display
+After=graphical.target
+After=localdisplay.service
+Wants=localdisplay.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "sleep 3 && modprobe ft6236"
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target
+EOF
+
+# Aktivieren
+systemctl daemon-reload
+systemctl enable ft6236-delay.service
+systemctl start ft6236-delay.service
+
+echo "✅ Installation abgeschlossen auf Pi 2"
+'
+
+# Reboot
+sudo reboot
+
+
+VERIFIKATION NACH REBOOT:
+--------------------------
+
+# Auf beiden Pis nach Reboot:
+sudo systemctl status ft6236-delay.service
+lsmod | grep ft6236
+ls -la /dev/input/event*
+systemctl is-active localdisplay.service
+
+
+ROLLBACK (falls nötig):
+------------------------
+
+sudo systemctl disable ft6236-delay.service
+sudo systemctl stop ft6236-delay.service
+sudo cp /boot/firmware/config.txt.backup-* /boot/firmware/config.txt
+sudo reboot
+

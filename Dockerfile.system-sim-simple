@@ -1,0 +1,65 @@
+# Simplified System Simulation (without systemd)
+# Tests all components without full systemd boot
+
+FROM debian:bookworm-slim
+
+# Install required packages
+RUN apt-get update && \
+    apt-get install -y \
+    sudo \
+    openssh-server \
+    curl \
+    wget \
+    net-tools \
+    iputils-ping \
+    hostname \
+    python3 \
+    python3-pip \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create groups
+RUN (groupadd -f spi 2>/dev/null || true) && \
+    (groupadd -f gpio 2>/dev/null || true) && \
+    (groupadd -f i2c 2>/dev/null || true) && \
+    (groupadd -f plugdev 2>/dev/null || true)
+
+# Create user 'andre' with UID 1000
+RUN (groupadd -g 1000 andre 2>/dev/null || groupmod -g 1000 $(getent group 1000 | cut -d: -f1) 2>/dev/null || true) && \
+    (useradd -m -s /bin/bash -u 1000 -g 1000 andre 2>/dev/null || usermod -u 1000 -g 1000 andre 2>/dev/null || true) && \
+    echo "andre:0815" | chpasswd && \
+    usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre 2>/dev/null || \
+    usermod -aG audio,video,sudo andre
+
+# Add andre to sudoers
+RUN echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre && \
+    chmod 0440 /etc/sudoers.d/andre
+
+# Set hostname
+RUN echo "GhettoBlaster" > /etc/hostname
+
+# Create directories
+RUN mkdir -p \
+    /lib/systemd/system \
+    /usr/local/bin \
+    /var/log \
+    /boot/firmware \
+    /var/www/daemon \
+    /tmp/chromium-data \
+    /home/andre/.config
+
+# Create mock boot files
+RUN touch /boot/firmware/ssh && \
+    echo "display_rotate=0" > /boot/firmware/config.txt && \
+    echo "hdmi_force_mode=1" >> /boot/firmware/config.txt
+
+# Set up SSH
+RUN mkdir -p /var/run/sshd && \
+    ssh-keygen -A
+
+# Expose SSH
+EXPOSE 22
+
+# Start with sleep infinity to keep container running
+CMD ["/bin/sleep", "infinity"]
+

@@ -1,0 +1,46 @@
+[Unit]
+Description=SSH ASAP - Start SSH as early as humanly possible
+DefaultDependencies=no
+# Start BEFORE everything else
+After=local-fs.target
+Before=sysinit.target
+Before=basic.target
+Before=network.target
+Before=cloud-init.target
+Before=moode-startup.service
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+# MULTIPLE METHODS - SSH SO FRÜH WIE MÖGLICH
+ExecStart=/bin/bash -c '
+    # Method 1: SSH Flag-Datei (wird von Raspberry Pi OS erkannt)
+    touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true
+    
+    # Method 2: systemctl enable (sofort)
+    systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true
+    
+    # Method 3: systemctl start (sofort)
+    systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true
+    
+    # Method 4: Direkt sshd starten (wenn systemctl noch nicht bereit)
+    /usr/sbin/sshd -t 2>/dev/null && /usr/sbin/sshd -D -p 22 & 2>/dev/null || true
+    
+    echo "✅ SSH ASAP activated"
+'
+
+# Run multiple times for safety
+ExecStartPost=/bin/bash -c 'sleep 2; systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true; systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true; touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true'
+ExecStartPost=/bin/bash -c 'sleep 5; systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true'
+
+[Install]
+# Installiere in ALLE möglichen Targets
+WantedBy=local-fs.target
+WantedBy=sysinit.target
+WantedBy=basic.target
+WantedBy=multi-user.target
+RequiredBy=network.target
+

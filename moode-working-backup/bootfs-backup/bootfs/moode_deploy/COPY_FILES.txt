@@ -1,0 +1,24 @@
+MANUAL FILE COPY INSTRUCTIONS
+=============================
+
+Since automated copying failed, please copy these files manually:
+
+1. Copy wizard-functions.js:
+   Source: /Users/andrevollmer/moodeaudio-cursor/test-wizard/wizard-functions.js
+   Destination: /Volumes/bootfs/moode_deploy/test-wizard/wizard-functions.js
+
+2. Copy snd-config.html:
+   Source: /Users/andrevollmer/moodeaudio-cursor/test-wizard/snd-config.html
+   Destination: /Volumes/bootfs/moode_deploy/test-wizard/snd-config.html
+
+3. Copy room-correction-wizard.php:
+   Source: /Users/andrevollmer/moodeaudio-cursor/moode-source/www/command/room-correction-wizard.php
+   Destination: /Volumes/bootfs/moode_deploy/command/room-correction-wizard.php
+   (Create /Volumes/bootfs/moode_deploy/command/ directory first if it doesn't exist)
+
+You can use Finder to drag and drop, or use Terminal:
+  cp /Users/andrevollmer/moodeaudio-cursor/test-wizard/wizard-functions.js /Volumes/bootfs/moode_deploy/test-wizard/
+  cp /Users/andrevollmer/moodeaudio-cursor/test-wizard/snd-config.html /Volumes/bootfs/moode_deploy/test-wizard/
+  mkdir -p /Volumes/bootfs/moode_deploy/command
+  cp /Users/andrevollmer/moodeaudio-cursor/moode-source/www/command/room-correction-wizard.php /Volumes/bootfs/moode_deploy/command/
+

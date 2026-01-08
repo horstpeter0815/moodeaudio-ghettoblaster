@@ -1,0 +1,47 @@
+================================================================================
+LÖTANLEITUNG: GPIO 14 als Reset-Pin für AMP100
+================================================================================
+
+ZIEL:
+GPIO 14 (Raspberry Pi Pin 8) direkt zum Reset-Pin des PCM5122 löten
+
+VERBINDUNG:
+Raspberry Pi Pin 8 (GPIO 14)  ----->  PCM5122 Reset-Pin (RST)
+
+RASPBERRY PI:
+  - Pin 8 = GPIO 14
+  - Position: 4. Pin von oben links (wenn GPIO Header oben ist)
+  - Pin 8 ist in der linken Spalte, 4. von oben
+
+AMP100 BOARD (laut Datenblatt):
+  - Es gibt einen 3-Pin Header mit "SDA GPIO14" und "SCL MPGPIO"
+  - Dieser Header ist auf dem AMP100 Board (neben den Lautsprecherklemmen)
+  - ABER: GPIO 14 ist hier für SDA, nicht für Reset!
+  
+PCM5122 CHIP (auf AMP100 Board):
+  - Reset-Pin (RST) muss direkt am PCM5122 Chip gefunden werden
+  - PCM5122 Chip ist auf dem AMP100 Board
+  - Reset-Pin ist normalerweise Pin 4 des PCM5122 (RST Pin)
+  - WICHTIG: Direkt zum Chip löten, nicht über AMP100 Board!
+
+SCHRITTE:
+1. PCM5122 Chip auf AMP100 Board lokalisieren
+2. Reset-Pin (RST) am PCM5122 Chip finden
+3. Kabel von Raspberry Pi Pin 8 zum PCM5122 Reset-Pin löten
+4. Overlay aktivieren (siehe unten)
+
+NACH DEM LÖTEN:
+1. In /boot/firmware/config.txt:
+   dtoverlay=hifiberry-amp100-pi5-gpio14
+   
+2. Altes Overlay entfernen:
+   # dtoverlay=hifiberry-amp100-pi5
+
+3. Reboot
+
+PRÜFUNG:
+- cat /proc/asound/cards
+- dmesg | grep pcm5122
+
+HINWEIS:
+GPIO 14 ist normalerweise UART TXD, wird aber als Reset-Pin verwendet.

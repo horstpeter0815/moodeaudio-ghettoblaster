@@ -1,0 +1,78 @@
+# INSTALL INDEPENDENT SSH SERVICE VIA WEBSSH
+# Öffne: http://192.168.1.101:4200
+# Kopiere alles ab der nächsten Zeile und füge es ins Terminal ein:
+
+# Create SSH activation script
+sudo tee /boot/firmware/ssh-activate.sh > /dev/null << 'SCRIPT_EOF'
+#!/bin/bash
+# Independent SSH Activation Script
+systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true
+systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true
+touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true
+if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
+    ssh-keygen -A 2>/dev/null || true
+fi
+systemctl unmask ssh 2>/dev/null || systemctl unmask sshd 2>/dev/null || true
+mkdir -p /etc/systemd/system/multi-user.target.wants 2>/dev/null || true
+if [ -f /lib/systemd/system/ssh.service ]; then
+    ln -sf /lib/systemd/system/ssh.service /etc/systemd/system/multi-user.target.wants/ssh.service 2>/dev/null || true
+fi
+if [ -f /lib/systemd/system/sshd.service ]; then
+    ln -sf /lib/systemd/system/sshd.service /etc/systemd/system/multi-user.target.wants/sshd.service 2>/dev/null || true
+fi
+exit 0
+SCRIPT_EOF
+
+sudo chmod +x /boot/firmware/ssh-activate.sh
+
+# Create systemd service
+sudo tee /etc/systemd/system/independent-ssh.service > /dev/null << 'SERVICE_EOF'
+[Unit]
+Description=Independent SSH Service - Guarantees SSH is always enabled
+DefaultDependencies=no
+After=local-fs.target
+Before=network.target
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+ExecStart=/boot/firmware/ssh-activate.sh
+RemainAfterExit=yes
+ExecStartPost=/bin/bash -c 'sleep 2; /boot/firmware/ssh-activate.sh'
+ExecStartPost=/bin/bash -c 'sleep 5; /boot/firmware/ssh-activate.sh'
+ExecStartPost=/bin/bash -c 'sleep 10; systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true; systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true'
+
+[Install]
+WantedBy=local-fs.target
+WantedBy=sysinit.target
+WantedBy=multi-user.target
+SERVICE_EOF
+
+# Enable service
+sudo mkdir -p /etc/systemd/system/local-fs.target.wants
+sudo ln -sf /etc/systemd/system/independent-ssh.service /etc/systemd/system/local-fs.target.wants/independent-ssh.service
+sudo mkdir -p /etc/systemd/system/sysinit.target.wants
+sudo ln -sf /etc/systemd/system/independent-ssh.service /etc/systemd/system/sysinit.target.wants/independent-ssh.service
+
+# Create rc.local fallback
+sudo tee /etc/rc.local > /dev/null << 'RCLOCAL_EOF'
+#!/bin/bash
+/boot/firmware/ssh-activate.sh 2>/dev/null || true
+exit 0
+RCLOCAL_EOF
+
+sudo chmod +x /etc/rc.local
+
+# Create SSH flag
+sudo touch /boot/firmware/ssh
+sudo chmod 644 /boot/firmware/ssh
+
+# Enable and start SSH now
+sudo systemctl enable ssh
+sudo systemctl start ssh
+sudo systemctl enable independent-ssh.service
+sudo systemctl start independent-ssh.service
+
+echo "✅ Independent SSH Service installiert!"
+echo "SSH sollte jetzt funktionieren: ssh pi@192.168.1.101 (Pass: moodeaudio)"
+

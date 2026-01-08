@@ -1,0 +1,21 @@
+[Unit]
+Description=Boot Debug Logger - Collects comprehensive boot diagnostics
+DefaultDependencies=no
+After=local-fs.target
+Before=network.target
+Before=cloud-init.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+# Start logging immediately and continue for 10 minutes
+ExecStart=/usr/local/bin/boot-debug-logger.sh start
+# Keep running in background to collect ongoing logs
+ExecStartPost=/bin/bash -c '/usr/local/bin/boot-debug-logger.sh monitor &'
+
+[Install]
+WantedBy=local-fs.target
+WantedBy=sysinit.target
+

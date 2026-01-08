@@ -1,0 +1,24 @@
+[Unit]
+Description=Start Local Display (Ghettoblaster)
+After=graphical.target
+After=xserver-ready.service
+Wants=graphical.target
+Wants=xserver-ready.service
+Requires=graphical.target
+
+[Service]
+Type=simple
+User=andre
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/andre/.Xauthority
+ExecStartPre=/usr/local/bin/xserver-ready.sh
+ExecStartPre=/bin/sleep 2
+ExecStart=/usr/local/bin/start-chromium-clean.sh
+TimeoutStartSec=60
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

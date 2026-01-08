@@ -1,0 +1,21 @@
+# Bring Ethernet Up - Alternative commands (no dhclient needed)
+
+# 1. Bring interface up
+sudo ip link set eth0 up
+
+# 2. Check status
+ip link show eth0
+
+# 3. Restart NetworkManager (it will get DHCP)
+sudo systemctl restart NetworkManager
+
+# 4. Wait a few seconds, then check IP
+sleep 5
+ip addr show eth0
+
+# 5. Check NetworkManager status
+sudo systemctl status NetworkManager | head -15
+
+
+
+

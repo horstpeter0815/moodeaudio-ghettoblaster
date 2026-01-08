@@ -1,0 +1,28 @@
+# Ghettoblaster Custom Build - config.txt
+# Raspberry Pi 5 Optimized
+
+# Display
+disable_overscan=1
+display_rotate=0
+dtoverlay=vc4-kms-v3d-pi5,noaudio
+
+# Custom HDMI Mode (1280x400)
+hdmi_group=2
+hdmi_mode=87
+hdmi_cvt=1280 400 60 6 0 0 0
+
+# I2C
+dtparam=i2c_arm=on
+dtparam=i2c_arm_baudrate=100000
+
+# SPI
+dtparam=spi=on
+
+# Audio - HiFiBerry AMP100
+dtoverlay=hifiberry-amp100,automute
+
+# Touchscreen - FT6236 (wird von Service geladen)
+# dtoverlay=ft6236 (NICHT hier, wird von ft6236-delay.service geladen)
+
+# Boot
+boot_delay=0

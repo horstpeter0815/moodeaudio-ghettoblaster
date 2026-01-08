@@ -1,0 +1,53 @@
+FROM debian:bookworm-slim
+
+# Install required packages for network testing
+RUN apt-get update && apt-get install -y \
+    systemd \
+    systemd-sysv \
+    iproute2 \
+    net-tools \
+    iputils-ping \
+    dhcpcd5 \
+    isc-dhcp-client \
+    network-manager \
+    iptables \
+    dnsutils \
+    curl \
+    wget \
+    vim \
+    less \
+    && rm -rf /var/lib/apt/lists/*
+
+# Remove systemd services that we don't need
+RUN systemctl mask \
+    getty@tty1.service \
+    getty@tty2.service \
+    getty@tty3.service \
+    getty@tty4.service \
+    getty@tty5.service \
+    getty@tty6.service \
+    console-getty.service
+
+# Create fake network interfaces for testing
+COPY network-test/mock-interfaces.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/mock-interfaces.sh
+
+# Copy network mode manager for testing
+COPY moode-source/usr/local/bin/network-mode-manager.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/network-mode-manager.sh
+
+# Copy service files for testing
+COPY moode-source/lib/systemd/system/network-mode-*.service /lib/systemd/system/
+COPY moode-source/lib/systemd/system/network-mode-manager.service /lib/systemd/system/
+
+# Enable network mode manager service
+RUN systemctl enable network-mode-manager.service
+
+# Create test script directory
+RUN mkdir -p /test
+
+# Set up systemd
+CMD ["/lib/systemd/systemd"]
+
+
+

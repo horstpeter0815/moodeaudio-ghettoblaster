@@ -1,0 +1,18 @@
+# SET MAC STATIC IP FOR DIRECT LAN CONNECTION
+# Führe diese Befehle im Terminal aus:
+
+# 1. Finde Ethernet Interface
+ifconfig | grep -E "^en[0-9]"
+
+# 2. Setze statische IP (normalerweise en4)
+sudo ifconfig en4 192.168.10.1 netmask 255.255.255.0
+
+# 3. Prüfe Verbindung
+ping -c 3 192.168.10.2
+
+# ODER in System Settings:
+# System Settings → Network → Ethernet → Configure IPv4 → Manually
+# IP: 192.168.10.1
+# Subnet: 255.255.255.0
+# Router: (leer lassen)
+

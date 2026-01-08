@@ -1,0 +1,70 @@
+[Unit]
+Description=Boot Complete Minimal - ETH0 + SSH in ONE service, NO dependencies
+DefaultDependencies=no
+After=local-fs.target
+Before=network.target
+Before=cloud-init.target
+# NICHT Before=sysinit.target - sysinit ist zu früh!
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+# ALLES IN EINEM SERVICE - KEINE ABHÄNGIGKEITEN
+ExecStart=/bin/bash -c '
+    echo "=== BOOT COMPLETE MINIMAL START ==="
+    
+    # 1. ETH0 DIREKT konfigurieren (wenn Interface vorhanden)
+    # Warte max 5 Sekunden auf eth0 Interface
+    ETH0_FOUND=false
+    for i in {1..5}; do
+        if ip link show eth0 >/dev/null 2>&1; then
+            ETH0_FOUND=true
+            break
+        fi
+        sleep 1
+    done
+    
+    if [ "$ETH0_FOUND" = "true" ]; then
+        echo "🔧 Konfiguriere eth0: 192.168.10.2"
+        # Setze IP
+        ifconfig eth0 192.168.10.2 netmask 255.255.255.0 up 2>/dev/null || true
+        
+        # Entferne alte Default Route falls vorhanden (nur für eth0 Gateway)
+        route del default gw 192.168.10.1 2>/dev/null || true
+        ip route del default via 192.168.10.1 2>/dev/null || true
+        # Setze neue Default Route
+        route add default gw 192.168.10.1 eth0 2>/dev/null || true
+        ip route add default via 192.168.10.1 dev eth0 2>/dev/null || true
+        
+        # DNS konfigurieren
+        echo "nameserver 192.168.10.1" > /etc/resolv.conf 2>/dev/null || true
+        echo "nameserver 8.8.8.8" >> /etc/resolv.conf 2>/dev/null || true
+        
+        # Prüfe ob IP gesetzt wurde
+        ETH0_IP=$(ip addr show eth0 2>/dev/null | grep "inet " | awk "{print \$2}" | cut -d/ -f1)
+        if [ "$ETH0_IP" = "192.168.10.2" ]; then
+            echo "✅ eth0 konfiguriert: $ETH0_IP"
+        else
+            echo "⚠️  eth0 IP: $ETH0_IP (sollte 192.168.10.2 sein) - versuche erneut..."
+            ifconfig eth0 192.168.10.2 netmask 255.255.255.0 up 2>/dev/null || true
+        fi
+    else
+        echo "⚠️  eth0 Interface nicht gefunden nach 5 Sekunden - wird später versucht"
+    fi
+    
+    # 2. SSH DIREKT starten
+    echo "🔧 Starte SSH..."
+    touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true
+    systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true
+    systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true
+    echo "✅ SSH gestartet"
+    
+    echo "=== BOOT COMPLETE MINIMAL END ==="
+'
+
+[Install]
+WantedBy=local-fs.target
+

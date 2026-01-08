@@ -1,0 +1,13 @@
+[Unit]
+Description=Validate config.txt
+Before=localdisplay.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/moode/bin/config-validate.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

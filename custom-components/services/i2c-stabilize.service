@@ -1,0 +1,16 @@
+[Unit]
+Description=I2C Bus Stabilization
+After=network.target
+Before=localdisplay.service
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/i2c-stabilize.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

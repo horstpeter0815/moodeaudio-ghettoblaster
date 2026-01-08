@@ -1,0 +1,65 @@
+#########################################
+# This file is managed by moOde
+#########################################
+
+# Device filters
+[cm4]
+otg_mode=1
+
+[pi4]
+# Pi 4 specific KMS driver with no audio (audio via HiFiBerry)
+dtoverlay=vc4-kms-v3d-pi4,noaudio
+hdmi_enable_4kp60=0
+
+[all]
+max_framebuffers=2
+disable_fw_kms_setup=0
+arm_64bit=1
+
+# General settings
+arm_boost=1
+disable_splash=0
+disable_overscan=1
+
+# HDMI Settings - ENABLED for HDMI Waveshare Display
+hdmi_ignore_hotplug=0
+display_auto_detect=1
+hdmi_force_hotplug=1
+hdmi_blanking=0
+hdmi_group=2
+hdmi_mode=87
+hdmi_cvt 1280 400 60 6 0 0 0
+hdmi_drive=2
+
+# I2C Settings
+dtparam=i2c_arm=on
+dtparam=i2c_arm_baudrate=100000
+dtparam=i2c_vc=on
+dtparam=i2s=on
+
+# Audio Settings
+dtparam=audio=off
+
+# Power Management for DSI Display
+WAKE_ON_GPIO=1
+POWER_OFF_ON_HALT=0
+
+# Do not alter this section
+# Integrated adapters
+#dtoverlay=disable-bt
+#dtoverlay=disable-wifi
+
+# Audio overlays
+dtoverlay=hifiberry-amp100
+
+# PCI Express
+#dtparam=pciex1
+#dtparam=pciex1_gen=3
+
+# Pi Touch1
+# Fan speed
+#dtparam=fan_temp0=50000,fan_temp0_hyst=5000,fan_temp0_speed=75
+
+# Waveshare 7.9" HDMI LCD - DSI Overlay deaktiviert für HDMI
+#dtoverlay=vc4-kms-dsi-waveshare-panel,7_9_inch,disable_touch,i2c1
+

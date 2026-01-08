@@ -1,0 +1,17 @@
+[Unit]
+Description=Audio Visualizer Service (WebSocket + HTTP)
+After=sound.target
+After=network.target
+Wants=sound.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/hifiberry/bin/audio-visualizer-service.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,67 @@
+{
+  "format_version": "1.0",
+  "description": "Display chain log format specification",
+  "log_entry": {
+    "id": "string - unique log entry ID (log_timestamp_pid)",
+    "timestamp": "number - nanosecond precision timestamp",
+    "layer": "string - one of: boot, kernel, framebuffer, drm, x11, xrandr, chromium",
+    "event_type": "string - one of: init, config, start, ready, error, snapshot, complete",
+    "message": "string - human-readable message",
+    "data": "object - layer-specific data",
+    "sessionId": "string - session identifier",
+    "correlationId": "string - correlation identifier for tracing events"
+  },
+  "layer_specific_data": {
+    "boot": {
+      "config.txt": "object - parsed config.txt values",
+      "cmdline.txt": "object - parsed cmdline.txt values",
+      "video_param": "string - video parameter from cmdline",
+      "hdmi_cvt": "string - HDMI CVT mode"
+    },
+    "framebuffer": {
+      "width": "number - framebuffer width",
+      "height": "number - framebuffer height",
+      "size": "string - widthxheight",
+      "virtual_size": "string - virtual size from /sys/class/graphics/fb0"
+    },
+    "drm": {
+      "width": "number - DRM plane width",
+      "height": "number - DRM plane height",
+      "size": "string - widthxheight",
+      "mode": "string - DRM mode",
+      "plane_id": "string - DRM plane ID"
+    },
+    "x11": {
+      "display": "string - DISPLAY variable",
+      "screen": "number - screen number",
+      "width": "number - X11 screen width",
+      "height": "number - X11 screen height",
+      "resolution": "string - screen resolution"
+    },
+    "xrandr": {
+      "output": "string - output name (e.g., HDMI-1)",
+      "mode": "string - mode (e.g., 400x1280)",
+      "rotation": "string - rotation (normal, left, right, inverted)",
+      "width": "number - output width after rotation",
+      "height": "number - output height after rotation"
+    },
+    "chromium": {
+      "pid": "number - Chromium process ID",
+      "window_id": "string - X11 window ID",
+      "width": "number - Chromium window width",
+      "height": "number - Chromium window height",
+      "size": "string - widthxheight",
+      "url": "string - Chromium URL"
+    }
+  },
+  "event_types": {
+    "init": "Initialization started",
+    "config": "Configuration parsed/applied",
+    "start": "Component started",
+    "ready": "Component ready",
+    "error": "Error occurred",
+    "snapshot": "State snapshot",
+    "complete": "Process complete"
+  }
+}
+

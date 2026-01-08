@@ -1,0 +1,39 @@
+[Unit]
+Description=Ghettoblaster User ID Fix (moOde requires UID 1000)
+After=local-fs.target
+Before=cloud-init.target
+Wants=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '
+    # Prüfe ob andre existiert und UID hat
+    ANDRE_UID=$(id -u andre 2>/dev/null || echo "")
+    if [ -z "$ANDRE_UID" ] || [ "$ANDRE_UID" != "1000" ]; then
+        echo "Fixing andre UID to 1000..."
+        # Versuche zuerst groupadd (falls Gruppe fehlt)
+        groupadd -g 1000 andre 2>/dev/null || true
+        # Versuche usermod (falls User existiert)
+        if usermod -u 1000 -g 1000 andre 2>/dev/null; then
+            echo "✅ andre UID auf 1000 geändert"
+        else
+            # Falls usermod fehlschlägt: User neu erstellen
+            echo "⚠️  usermod fehlgeschlagen - erstelle User neu..."
+            userdel -r andre 2>/dev/null || true
+            groupadd -g 1000 andre 2>/dev/null || true
+            useradd -m -s /bin/bash -u 1000 -g 1000 andre 2>/dev/null || true
+            usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre 2>/dev/null || true
+            echo "andre:0815" | chpasswd 2>/dev/null || true
+            echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre 2>/dev/null || true
+            chmod 0440 /etc/sudoers.d/andre 2>/dev/null || true
+            echo "✅ andre User neu erstellt mit UID 1000"
+        fi
+    else
+        echo "✅ andre hat bereits UID 1000"
+    fi
+'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

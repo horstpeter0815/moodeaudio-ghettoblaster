@@ -1,0 +1,27 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2712";
+
+    fragment@0 {
+        target = <&i2c1>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            status = "okay";
+
+            ft6236: ft6236@38 {
+                compatible = "focaltech,ft6236";
+                reg = <0x38>;
+                interrupt-parent = <&gpio>;
+                interrupts = <25 2>; /* GPIO 25, falling edge */
+                touchscreen-size-x = <1280>;
+                touchscreen-size-y = <400>;
+                touchscreen-inverted-x;
+                touchscreen-inverted-y;
+                touchscreen-swapped-x-y;
+            };
+        };
+    };
+};

@@ -1,0 +1,15 @@
+[Unit]
+Description=Ghettoblaster SSH and Sudoers Fix (PERMANENT)
+After=multi-user.target
+After=moode-startup.service
+Wants=multi-user.target
+
+[Service]
+Type=oneshot
+# CRITICAL: Enable and start SSH in multiple ways
+ExecStart=/bin/bash -c 'echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre && chmod 0440 /etc/sudoers.d/andre && visudo -c -f /etc/sudoers.d/andre 2>/dev/null || true && systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true && systemctl enable ssh.service 2>/dev/null || systemctl enable sshd.service 2>/dev/null || true && systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true && touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true && systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true && echo "✅ SSH and Sudoers fixed"'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

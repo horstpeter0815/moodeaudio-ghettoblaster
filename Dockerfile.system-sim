@@ -1,0 +1,79 @@
+# Complete System Simulation Environment
+# Simulates full Raspberry Pi boot with all services
+
+FROM debian:bookworm-slim
+
+# Install systemd and all required packages
+RUN apt-get update && \
+    apt-get install -y \
+    systemd \
+    systemd-sysv \
+    dbus \
+    sudo \
+    openssh-server \
+    curl \
+    wget \
+    net-tools \
+    iputils-ping \
+    hostname \
+    python3 \
+    python3-pip \
+    xvfb \
+    x11vnc \
+    xdotool \
+    chromium \
+    chromium-driver \
+    alsa-utils \
+    i2c-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create user 'andre' with UID 1000 (moOde requirement)
+# Create groups if they don't exist (Raspberry Pi specific groups)
+RUN groupadd -g 1000 andre && \
+    useradd -m -s /bin/bash -u 1000 -g 1000 andre && \
+    echo "andre:0815" | chpasswd && \
+    (groupadd -f spi 2>/dev/null || true) && \
+    (groupadd -f gpio 2>/dev/null || true) && \
+    (groupadd -f i2c 2>/dev/null || true) && \
+    (groupadd -f plugdev 2>/dev/null || true) && \
+    usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre 2>/dev/null || \
+    usermod -aG audio,video,sudo andre
+
+# Add andre to sudoers
+RUN echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre && \
+    chmod 0440 /etc/sudoers.d/andre
+
+# Set hostname (hosts will be set at runtime)
+RUN echo "GhettoBlaster" > /etc/hostname
+
+# Enable SSH
+RUN systemctl enable ssh || systemctl enable sshd || true
+
+# Create directories
+RUN mkdir -p \
+    /lib/systemd/system \
+    /usr/local/bin \
+    /var/log \
+    /boot/firmware \
+    /var/www/daemon \
+    /tmp/chromium-data \
+    /home/andre/.config
+
+# Create mock boot directory
+RUN touch /boot/firmware/ssh && \
+    echo "display_rotate=0" > /boot/firmware/config.txt && \
+    echo "hdmi_force_mode=1" >> /boot/firmware/config.txt
+
+# Prevent systemd from starting services that require hardware
+RUN systemctl mask getty@tty1.service || true
+
+# Set up X11 environment (mock)
+ENV DISPLAY=:0
+ENV XAUTHORITY=/home/andre/.Xauthority
+
+# Expose ports
+EXPOSE 22 80 8080 5900
+
+# Start systemd
+CMD ["/lib/systemd/systemd"]
+

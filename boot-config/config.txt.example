@@ -1,0 +1,9 @@
+# Example config.txt for display chain simulation
+# Copy to config.txt and modify as needed
+
+dtoverlay=vc4-kms-v3d-pi5,noaudio
+hdmi_group=2
+hdmi_mode=87
+hdmi_cvt=400 1280 60 6 0 0 0
+dtoverlay=hifiberry-amp100,automute
+

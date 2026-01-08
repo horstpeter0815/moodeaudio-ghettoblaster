@@ -1,0 +1,29 @@
+# Check Network Status - Run in WebSSH or on Pi console
+
+# 1. Check all IP addresses
+hostname -I
+ip addr show | grep "inet "
+
+# 2. Check Ethernet
+ip addr show eth0
+ip link show eth0
+
+# 3. Check WiFi
+ip addr show wlan0
+ip link show wlan0
+
+# 4. Check NetworkManager connections
+ls -la /etc/NetworkManager/system-connections/
+
+# 5. Check if preconfigured.nmconnection exists
+ls -la /etc/NetworkManager/system-connections/preconfigured.nmconnection
+
+# 6. Check NetworkManager status
+sudo systemctl status NetworkManager | head -20
+
+# 7. Test connectivity
+ping -c 3 8.8.8.8
+
+
+
+

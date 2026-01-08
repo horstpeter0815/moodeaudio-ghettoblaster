@@ -1,0 +1,20 @@
+# Bring Ethernet Up - Run these commands
+
+# 1. Bring interface up
+sudo ip link set eth0 up
+
+# 2. Check status (should not be red now)
+ip link show eth0
+
+# 3. Try to get DHCP address
+sudo dhclient -v eth0
+
+# 4. Check if IP address was assigned
+ip addr show eth0
+
+# 5. If still no IP, check NetworkManager
+sudo systemctl status NetworkManager | head -20
+
+
+
+

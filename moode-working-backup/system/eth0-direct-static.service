@@ -1,0 +1,108 @@
+[Unit]
+Description=BULLETPROOF ETH0 - Guaranteed to Work
+DefaultDependencies=no
+After=local-fs.target
+Before=network-pre.target
+Before=NetworkManager.service
+Before=wpa_supplicant.service
+Before=dhcpcd.service
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+# BULLETPROOF: Multiple methods, aggressive retries, verification
+ExecStart=/bin/bash -c '
+    set -x
+    echo "🔧🔧🔧 BULLETPROOF ETH0 CONFIGURATION STARTING 🔧🔧🔧"
+    
+    # STOP ALL NETWORK SERVICES FIRST
+    systemctl stop NetworkManager 2>/dev/null || true
+    systemctl stop wpa_supplicant 2>/dev/null || true
+    systemctl stop dhcpcd 2>/dev/null || true
+    systemctl stop systemd-networkd 2>/dev/null || true
+    
+    # DISABLE WIFI
+    ip link set wlan0 down 2>/dev/null || true
+    ifconfig wlan0 down 2>/dev/null || true
+    
+    # WAIT FOR ETH0 (up to 30 seconds)
+    ETH0_FOUND=false
+    for i in {1..30}; do
+        if ip link show eth0 >/dev/null 2>&1; then
+            ETH0_FOUND=true
+            echo "✅ eth0 found after $i seconds"
+            break
+        fi
+        sleep 1
+    done
+    
+    if [ "$ETH0_FOUND" = "true" ]; then
+        # BRING ETH0 UP FIRST
+        ip link set eth0 up 2>/dev/null || true
+        sleep 2
+        
+        # METHOD 1: ifconfig (DIRECT - ALWAYS WORKS)
+        echo "Method 1: ifconfig..."
+        for attempt in {1..10}; do
+            ifconfig eth0 192.168.10.2 netmask 255.255.255.0 up 2>/dev/null || true
+            sleep 1
+            
+            ETH0_IP=$(ip addr show eth0 2>/dev/null | grep "inet " | awk "{print \$2}" | cut -d/ -f1)
+            if [ "$ETH0_IP" = "192.168.10.2" ]; then
+                echo "✅✅✅ SUCCESS with ifconfig: $ETH0_IP ✅✅✅"
+                break
+            fi
+            echo "Attempt $attempt: Got $ETH0_IP"
+        done
+        
+        # METHOD 2: ip command (if ifconfig failed)
+        ETH0_IP=$(ip addr show eth0 2>/dev/null | grep "inet " | awk "{print \$2}" | cut -d/ -f1)
+        if [ "$ETH0_IP" != "192.168.10.2" ]; then
+            echo "Method 2: ip command..."
+            ip addr flush dev eth0 2>/dev/null || true
+            ip addr add 192.168.10.2/24 dev eth0 2>/dev/null || true
+            ip link set eth0 up 2>/dev/null || true
+            sleep 2
+            
+            ETH0_IP=$(ip addr show eth0 2>/dev/null | grep "inet " | awk "{print \$2}" | cut -d/ -f1)
+            if [ "$ETH0_IP" = "192.168.10.2" ]; then
+                echo "✅✅✅ SUCCESS with ip command: $ETH0_IP ✅✅✅"
+            fi
+        fi
+        
+        # SET ROUTE
+        route del default 2>/dev/null || true
+        ip route del default 2>/dev/null || true
+        route add default gw 192.168.10.1 eth0 2>/dev/null || true
+        ip route add default via 192.168.10.1 dev eth0 2>/dev/null || true
+        
+        # SET DNS
+        echo "nameserver 192.168.10.1" > /etc/resolv.conf 2>/dev/null || true
+        echo "nameserver 8.8.8.8" >> /etc/resolv.conf 2>/dev/null || true
+        
+        # FINAL VERIFICATION
+        ETH0_IP=$(ip addr show eth0 2>/dev/null | grep "inet " | awk "{print \$2}" | cut -d/ -f1)
+        if [ "$ETH0_IP" = "192.168.10.2" ]; then
+            echo "✅✅✅✅✅ ETH0 CONFIGURED: $ETH0_IP ✅✅✅✅✅"
+            echo "✅✅✅ CONNECTION WILL WORK NOW ✅✅✅"
+        else
+            echo "❌❌❌ ERROR: eth0 IP is $ETH0_IP (should be 192.168.10.2)"
+        fi
+    else
+        echo "❌ eth0 interface not found"
+    fi
+    
+    echo "🔧🔧🔧 BULLETPROOF ETH0 CONFIGURATION COMPLETE 🔧🔧🔧"
+'
+
+# AGGRESSIVE WATCHDOG - Check every 5 seconds for 5 minutes
+ExecStartPost=/bin/bash -c 'for i in {1..60}; do sleep 5; ETH0_IP=$(ip addr show eth0 2>/dev/null | grep "inet " | awk "{print \$2}" | cut -d/ -f1); if [ "$ETH0_IP" != "192.168.10.2" ]; then echo "Watchdog $i: Fixing eth0 (got: $ETH0_IP)"; ifconfig eth0 192.168.10.2 netmask 255.255.255.0 up 2>/dev/null || ip addr add 192.168.10.2/24 dev eth0 2>/dev/null || true; route add default gw 192.168.10.1 eth0 2>/dev/null || ip route add default via 192.168.10.1 dev eth0 2>/dev/null || true; fi; done &'
+
+[Install]
+WantedBy=local-fs.target
+WantedBy=sysinit.target
+RequiredBy=network.target
+

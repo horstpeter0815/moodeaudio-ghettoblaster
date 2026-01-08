@@ -1,0 +1,16 @@
+# Restore Working moOde Audio - Run these commands:
+
+cd ~/moodeaudio-cursor
+
+# Run restore script:
+sudo ./RESTORE_WORKING_MOODE.sh
+
+# Or manual restore:
+sudo rsync -av ~/moodeaudio-cursor/moode-working-backup/etc/ /Volumes/rootfs/etc/
+sudo rsync -av ~/moodeaudio-cursor/moode-working-backup/html/ /Volumes/rootfs/var/www/html/
+sudo rsync -av ~/moodeaudio-cursor/moode-working-backup/var/ /Volumes/rootfs/var/
+sudo rsync -av ~/moodeaudio-cursor/moode-working-backup/system/ /Volumes/rootfs/lib/systemd/system/
+sudo rsync -av ~/moodeaudio-cursor/moode-working-backup/bootfs-backup/bootfs/ /Volumes/bootfs/
+
+echo "✅ Restoration complete!"
+

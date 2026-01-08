@@ -1,0 +1,57 @@
+EXECUTE THESE COMMANDS ON PI 5 NOW:
+
+==========================================
+STEP 1: Copy scripts to Pi 5 (if not already there)
+==========================================
+
+# On your Mac, copy scripts to Pi 5:
+# scp *.sh pi@<PI5_IP>:/home/pi/
+# Or use USB/SD card
+
+==========================================
+STEP 2: SSH to Pi 5
+==========================================
+
+ssh pi@<PI5_IP>
+# Or connect directly to Pi 5
+
+==========================================
+STEP 3: Go to script directory
+==========================================
+
+cd /path/to/scripts
+# Or wherever you put the scripts
+
+==========================================
+STEP 4: Make scripts executable
+==========================================
+
+chmod +x *.sh
+
+==========================================
+STEP 5: EXECUTE THE FIX
+==========================================
+
+./fix_login_screen.sh
+
+# Then:
+startx
+
+# OR if that doesn't work:
+./force_start_moode.sh
+
+==========================================
+STEP 6: Verify
+==========================================
+
+./check_moode_status.sh
+
+==========================================
+
+IF YOU'RE AT LOGIN SCREEN:
+1. Press Ctrl+Alt+F1
+2. Login
+3. Run: ./force_start_moode.sh
+4. Wait 10 seconds
+5. Press Ctrl+Alt+F7
+

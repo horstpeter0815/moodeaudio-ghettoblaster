@@ -1,0 +1,37 @@
+# Diagnose Why Ethernet Doesn't Work - Run on Pi
+
+# 1. Check if NetworkManager is running
+sudo systemctl status NetworkManager
+
+# 2. Check if NetworkManager is enabled
+sudo systemctl is-enabled NetworkManager
+
+# 3. Check if eth0 interface exists
+ip link show eth0
+
+# 4. Check if eth0 is UP or DOWN
+ip link show eth0 | grep -i "state"
+
+# 5. Check NetworkManager connections
+sudo nmcli connection show
+
+# 6. Check NetworkManager device status
+sudo nmcli device status
+
+# 7. Check if systemd-networkd is interfering
+sudo systemctl status systemd-networkd
+
+# 8. Check network services
+sudo systemctl list-units | grep -i network
+
+# 9. Try to bring eth0 up manually
+sudo ip link set eth0 up
+sudo nmcli device connect eth0
+
+# 10. Check logs
+sudo journalctl -u NetworkManager | tail -50
+sudo dmesg | grep -i eth0 | tail -20
+
+
+
+

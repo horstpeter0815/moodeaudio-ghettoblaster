@@ -1,0 +1,119 @@
+=== AUTONOMOUS BUILD WORKER BEENDET ===
+2025-12-08 02:12:50 ✅ Build neu gestartet (PID: 26)
+2025-12-08 02:56:01 ✅ Build neu gestartet mit deploy-Fix (PID: 55184)
+[2025-12-08 02:59:36] === AUTONOMOUS COMPLETE WORKFLOW GESTARTET ===
+[2025-12-08 02:59:36] 🔄 Iteration 1/5
+[2025-12-08 02:59:36] ⏳ Warte auf Build-Abschluss...
+[2025-12-08 02:59:36] ✅ Build beendet
+[2025-12-08 02:59:37] ✅ Image gefunden: /tmp/pi-gen-work/moode-r1001-arm64/export-image/moode-r1001-arm64-20251208_015551-lite.img
+[2025-12-08 03:00:02] ✅ Image kopiert
+[2025-12-08 03:00:02] 🔍 Starte Tests für: [2025-12-08 02:59:37] ✅ Image gefunden: /tmp/pi-gen-work/moode-r1001-arm64/export-image/moode-r1001-arm64-20251208_015551-lite.img
+[2025-12-08 03:00:02] ✅ Image kopiert
+./imgbuild/deploy/moode-r1001-arm64-20251208_015551-lite.img
+[2025-12-08 03:00:02] ❌ TESTS FEHLGESCHLAGEN:
+losetup: /tmp/test-image.img: failed to set up loop device: No such file or directory
+mount: /tmp/tmp.xeqfNO2Q0K: /dev/loop0p1 is not a valid block device.
+mount: /tmp/tmp.m7Oz68SEp3: /dev/loop0p2 is not a valid block device.
+FAIL: config.txt.overwrite nicht gefunden
+FAIL: /home/andre nicht gefunden
+FAIL: start-chromium-clean.sh nicht gefunden
+FAIL
+[2025-12-08 03:00:02] ❌ TESTS FEHLGESCHLAGEN - analysiere und fixe...
+[2025-12-08 03:00:02] 🔧 Analysiere Problem und fixe...
+[2025-12-08 03:00:03] ✅ Fixes scheinen korrekt zu sein
+[2025-12-08 03:00:03] 🔄 Starte Build neu...
+[2025-12-08 03:00:13] ✅ Build gestartet (PID: 64688)
+[2025-12-08 03:00:13] 🔄 Iteration 2/5
+[2025-12-08 03:00:13] ⏳ Warte auf Build-Abschluss...
+[2025-12-08 03:00:13] ⏳ Build läuft: [02:00:13]
+[2025-12-08 03:05:14] ✅ Build beendet
+[2025-12-08 03:05:14] ✅ Image gefunden: /tmp/pi-gen-work/moode-r1001-arm64/export-image/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:05:39] ✅ Image kopiert
+[2025-12-08 03:05:39] 🔍 Starte Tests für: [2025-12-08 03:05:14] ✅ Image gefunden: /tmp/pi-gen-work/moode-r1001-arm64/export-image/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:05:39] ✅ Image kopiert
+./imgbuild/deploy/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:05:39] ❌ TESTS FEHLGESCHLAGEN:
+losetup: /tmp/test-image.img: failed to set up loop device: No such file or directory
+mount: /tmp/tmp.0Z63Dd2OIt: /dev/loop0p1 is not a valid block device.
+mount: /tmp/tmp.3y67EXtvFr: /dev/loop0p2 is not a valid block device.
+FAIL: config.txt.overwrite nicht gefunden
+FAIL: /home/andre nicht gefunden
+FAIL: start-chromium-clean.sh nicht gefunden
+FAIL
+[2025-12-08 03:05:39] ❌ TESTS FEHLGESCHLAGEN - analysiere und fixe...
+[2025-12-08 03:05:39] 🔧 Analysiere Problem und fixe...
+[2025-12-08 03:05:39] ✅ Fixes scheinen korrekt zu sein
+[2025-12-08 03:05:39] 🔄 Starte Build neu...
+[2025-12-08 03:05:49] ✅ Build gestartet (PID: 74205)
+[2025-12-08 03:05:49] 🔄 Iteration 3/5
+[2025-12-08 03:05:49] ⏳ Warte auf Build-Abschluss...
+[2025-12-08 03:05:50] ⏳ Build läuft: [02:05:48]
+[2025-12-08 03:10:50] ✅ Build beendet
+[2025-12-08 03:10:50] ✅ Image gefunden: /tmp/pi-gen-work/moode-r1001-arm64/export-image/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:11:15] ✅ Image kopiert
+[2025-12-08 03:11:15] 🔍 Starte Tests für: [2025-12-08 03:10:50] ✅ Image gefunden: /tmp/pi-gen-work/moode-r1001-arm64/export-image/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:11:15] ✅ Image kopiert
+./imgbuild/deploy/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:11:15] ❌ TESTS FEHLGESCHLAGEN:
+losetup: /tmp/test-image.img: failed to set up loop device: No such file or directory
+mount: /tmp/tmp.7NuqY4QOmB: /dev/loop0p1 is not a valid block device.
+mount: /tmp/tmp.KbQuLSxIDd: /dev/loop0p2 is not a valid block device.
+FAIL: config.txt.overwrite nicht gefunden
+FAIL: /home/andre nicht gefunden
+FAIL: start-chromium-clean.sh nicht gefunden
+FAIL
+[2025-12-08 03:11:15] ❌ TESTS FEHLGESCHLAGEN - analysiere und fixe...
+[2025-12-08 03:11:15] 🔧 Analysiere Problem und fixe...
+[2025-12-08 03:11:15] ✅ Fixes scheinen korrekt zu sein
+[2025-12-08 03:11:15] 🔄 Starte Build neu...
+[2025-12-08 03:11:25] ✅ Build gestartet (PID: 83724)
+[2025-12-08 03:11:25] 🔄 Iteration 4/5
+[2025-12-08 03:11:25] ⏳ Warte auf Build-Abschluss...
+[2025-12-08 03:11:26] ⏳ Build läuft: [02:11:24]
+[2025-12-08 03:16:26] ✅ Build beendet
+[2025-12-08 03:16:26] ✅ Image gefunden: /tmp/pi-gen-work/moode-r1001-arm64/export-image/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:16:51] ✅ Image kopiert
+[2025-12-08 03:16:51] 🔍 Starte Tests für: [2025-12-08 03:16:26] ✅ Image gefunden: /tmp/pi-gen-work/moode-r1001-arm64/export-image/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:16:51] ✅ Image kopiert
+./imgbuild/deploy/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:16:51] ❌ TESTS FEHLGESCHLAGEN:
+losetup: /tmp/test-image.img: failed to set up loop device: No such file or directory
+mount: /tmp/tmp.KpKFczI6JM: /dev/loop0p1 is not a valid block device.
+mount: /tmp/tmp.eCnAoc9bCt: /dev/loop0p2 is not a valid block device.
+FAIL: config.txt.overwrite nicht gefunden
+FAIL: /home/andre nicht gefunden
+FAIL: start-chromium-clean.sh nicht gefunden
+FAIL
+[2025-12-08 03:16:51] ❌ TESTS FEHLGESCHLAGEN - analysiere und fixe...
+[2025-12-08 03:16:51] 🔧 Analysiere Problem und fixe...
+[2025-12-08 03:16:51] ✅ Fixes scheinen korrekt zu sein
+[2025-12-08 03:16:51] 🔄 Starte Build neu...
+[2025-12-08 03:17:01] ✅ Build gestartet (PID: 93246)
+[2025-12-08 03:17:01] 🔄 Iteration 5/5
+[2025-12-08 03:17:01] ⏳ Warte auf Build-Abschluss...
+[2025-12-08 03:17:01] ⏳ Build läuft: [02:17:00]
+[2025-12-08 03:22:02] ✅ Build beendet
+[2025-12-08 03:22:02] ✅ Image gefunden: /tmp/pi-gen-work/moode-r1001-arm64/export-image/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:22:27] ✅ Image kopiert
+[2025-12-08 03:22:27] 🔍 Starte Tests für: [2025-12-08 03:22:02] ✅ Image gefunden: /tmp/pi-gen-work/moode-r1001-arm64/export-image/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:22:27] ✅ Image kopiert
+./imgbuild/deploy/moode-r1001-arm64-20251208_020003-lite.img
+[2025-12-08 03:22:27] ❌ TESTS FEHLGESCHLAGEN:
+losetup: /tmp/test-image.img: failed to set up loop device: No such file or directory
+mount: /tmp/tmp.plMLIy0qqe: /dev/loop0p1 is not a valid block device.
+mount: /tmp/tmp.Q0pbYABwVH: /dev/loop0p2 is not a valid block device.
+FAIL: config.txt.overwrite nicht gefunden
+FAIL: /home/andre nicht gefunden
+FAIL: start-chromium-clean.sh nicht gefunden
+FAIL
+[2025-12-08 03:22:27] ❌ TESTS FEHLGESCHLAGEN - analysiere und fixe...
+[2025-12-08 03:22:27] 🔧 Analysiere Problem und fixe...
+[2025-12-08 03:22:27] ✅ Fixes scheinen korrekt zu sein
+[2025-12-08 03:22:27] 🔄 Starte Build neu...
+[2025-12-08 03:22:37] ✅ Build gestartet (PID: 102771)
+[2025-12-08 03:22:37] ❌ Maximale Iterationen erreicht
+[2025-12-08 03:22:37] === AUTONOMOUS COMPLETE WORKFLOW BEENDET ===
+2025-12-08 11:12:47 ✅ VERSUCH #27 gestartet (PID: 141199)
+2025-12-08 11:34:28 ✅ VERSUCH #27 ERFOLGREICH GEBRANNT
+2025-12-08 11:35:03 ✅ VERSUCH #27 ERFOLGREICH GEBRANNT
+2025-12-08 11:36:56 ✅ VERSUCH #27 ERFOLGREICH ABGESCHLOSSEN

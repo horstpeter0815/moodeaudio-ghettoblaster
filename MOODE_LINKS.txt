@@ -1,0 +1,33 @@
+MOODE WEB-UI LINKS
+==================
+
+Haupt-URL (Player):
+  https://10.10.11.39:8443/
+  http://10.10.11.39/
+
+Wizard:
+  https://10.10.11.39:8443/index-simple.html
+
+Web SSH (falls verfügbar):
+  https://10.10.11.39:8443/ssh
+  https://10.10.11.39:8443/webssh
+  https://10.10.11.39:8443/admin
+
+System-Config (für SSH-Einstellungen):
+  https://10.10.11.39:8443/system-config.php
+  https://10.10.11.39:8443/config.php
+
+PASSWORT SETZEN:
+----------------
+1. Öffne moOde Web-UI: https://10.10.11.39:8443/
+2. Gehe zu System-Config oder Admin-Bereich
+3. Suche nach "SSH" oder "User Management"
+4. Setze Passwort für Benutzer 'andre' oder 'pi'
+5. Oder aktiviere Web SSH, falls verfügbar
+
+ALTERNATIVE: Terminal am Raspberry
+----------------------------------
+Falls du physischen Zugriff hast:
+  sudo passwd andre
+  # Neues Passwort: 0815
+

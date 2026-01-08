@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  pi-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.pi-sim
+    container_name: pi-simulator
+    volumes:
+      # Mount custom services
+      - "./custom-components/services:/lib/systemd/system/custom:ro"
+      - "./custom-components/scripts:/usr/local/bin/custom:ro"
+      # Mount test directory
+      - "./pi-sim-test:/test:rw"
+      # Mount systemd (required for systemd to work in Docker)
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - TZ=UTC
+    stdin_open: true
+    tty: true
+    privileged: true
+    network_mode: host
+    # Override entrypoint to start systemd
+    entrypoint: ["/lib/systemd/systemd"]
+    command: ["--system", "--unit=multi-user.target"]
+
+volumes:
+  pi-sim-test:
+

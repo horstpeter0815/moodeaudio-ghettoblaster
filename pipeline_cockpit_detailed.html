@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio/Video Pipeline Cockpit - Detailed</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 10px;
+            font-size: 13px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .header h1 {
+            color: #60a5fa;
+            margin-bottom: 5px;
+            font-size: 24px;
+        }
+        
+        .header .subtitle {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .panel {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .panel-header {
+            color: #58a6ff;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 8px;
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .metric-item {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        
+        .metric-label {
+            font-size: 11px;
+            color: #8b949e;
+            margin-bottom: 4px;
+        }
+        
+        .metric-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #58a6ff;
+        }
+        
+        .metric-detail {
+            font-size: 10px;
+            color: #6e7681;
+            margin-top: 4px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-online { background: #238636; box-shadow: 0 0 6px #238636; }
+        .status-offline { background: #da3633; box-shadow: 0 0 6px #da3633; }
+        .status-warning { background: #f85149; box-shadow: 0 0 6px #f85149; }
+        
+        .chain-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .chain-title {
+            color: #f0883e;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .chain-boxes {
+            display: flex;
+            flex-direction: row-reverse;
+            gap: 12px;
+            padding: 15px;
+            background: #0d1117;
+            border-radius: 6px;
+            overflow-x: auto;
+            min-height: 120px;
+        }
+        
+        .chain-box {
+            min-width: 140px;
+            background: #161b22;
+            border: 2px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .chain-box:hover {
+            border-color: #58a6ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3);
+        }
+        
+        .chain-box.active {
+            border-color: #238636;
+            background: #1c2128;
+        }
+        
+        .chain-box.error {
+            border-color: #da3633;
+            background: #1c2128;
+        }
+        
+        .chain-box-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .chain-box-name {
+            font-weight: bold;
+            color: #58a6ff;
+            font-size: 14px;
+        }
+        
+        .chain-box-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .chain-box-details {
+            font-size: 11px;
+            color: #8b949e;
+            line-height: 1.4;
+        }
+        
+        .chain-box-metrics {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #30363d;
+            font-size: 10px;
+            color: #6e7681;
+        }
+        
+        .chain-arrow {
+            width: 20px;
+            height: 3px;
+            background: #30363d;
+            align-self: center;
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        .chain-arrow.active {
+            background: #238636;
+            box-shadow: 0 0 8px #238636;
+        }
+        
+        .chain-arrow::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid #30363d;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }
+        
+        .chain-arrow.active::after {
+            border-left-color: #238636;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .info-item {
+            background: #0d1117;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #30363d;
+        }
+        
+        .info-label {
+            font-size: 10px;
+            color: #8b949e;
+            margin-bottom: 3px;
+        }
+        
+        .info-value {
+            font-size: 12px;
+            color: #c9d1d9;
+            word-break: break-all;
+        }
+        
+        .log-viewer {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+        
+        .log-entry {
+            padding: 3px 0;
+            border-bottom: 1px solid #21262d;
+        }
+        
+        .log-entry.error { color: #f85149; }
+        .log-entry.warning { color: #f0883e; }
+        .log-entry.info { color: #58a6ff; }
+        .log-entry.success { color: #238636; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            width: 90%;
+        }
+        
+        .modal-header {
+            color: #58a6ff;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 10px;
+        }
+        
+        .close-btn {
+            float: right;
+            cursor: pointer;
+            color: #8b949e;
+            font-size: 24px;
+            line-height: 1;
+        }
+        
+        .close-btn:hover {
+            color: #c9d1d9;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #21262d;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #238636, #58a6ff);
+            transition: width 0.3s;
+        }
+        
+        .service-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: #0d1117;
+            border-radius: 4px;
+            border-left: 3px solid #30363d;
+        }
+        
+        .service-item.active {
+            border-left-color: #238636;
+        }
+        
+        .service-item.inactive {
+            border-left-color: #da3633;
+        }
+        
+        .service-name {
+            font-size: 12px;
+            color: #c9d1d9;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid #30363d;
+            margin-bottom: 12px;
+        }
+        
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            color: #8b949e;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .tab.active {
+            color: #58a6ff;
+            border-bottom-color: #58a6ff;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .detail-section {
+            margin-bottom: 15px;
+        }
+        
+        .detail-section-title {
+            color: #f0883e;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .collapsible {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .collapsible::before {
+            content: '▶ ';
+            display: inline-block;
+            transition: transform 0.2s;
+            margin-right: 5px;
+        }
+        
+        .collapsible.expanded::before {
+            transform: rotate(90deg);
+        }
+        
+        .collapsible-content {
+            display: none;
+            margin-left: 15px;
+            margin-top: 8px;
+        }
+        
+        .collapsible.expanded + .collapsible-content {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎬 Audio/Video Pipeline Cockpit - Detailed View</h1>
+        <div class="subtitle">Real-time System Monitoring & Pipeline Visualization</div>
+        <div style="margin-top: 10px; font-size: 12px; color: #8b949e;">
+            Last Update: <span id="lastUpdate">--</span> | 
+            Refresh: <span id="refreshRate">5s</span>
+        </div>
+    </div>
+    
+    <div class="dashboard">
+        <div class="sidebar">
+            <!-- System Metrics -->
+            <div class="panel">
+                <div class="panel-header">📊 System Metrics</div>
+                <div class="metric-grid">
+                    <div class="metric-item">
+                        <div class="metric-label">CPU Usage</div>
+                        <div class="metric-value" id="cpuUsage">--</div>
+                        <div class="progress-bar"><div class="progress-fill" id="cpuBar" style="width: 0%"></div></div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">Memory</div>
+                        <div class="metric-value" id="memUsage">--</div>
+                        <div class="progress-bar"><div class="progress-fill" id="memBar" style="width: 0%"></div></div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">Temperature</div>
+                        <div class="metric-value" id="temperature">--</div>
+                        <div class="metric-detail" id="tempStatus">--</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">Disk Usage</div>
+                        <div class="metric-value" id="diskUsage">--</div>
+                        <div class="progress-bar"><div class="progress-fill" id="diskBar" style="width: 0%"></div></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hardware Info -->
+            <div class="panel">
+                <div class="panel-header">🔧 Hardware Information</div>
+                <div class="info-grid" id="hardwareInfo">
+                    <div class="info-item">
+                        <div class="info-label">Pi Model</div>
+                        <div class="info-value" id="piModel">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Kernel</div>
+                        <div class="info-value" id="kernelVersion">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">OS Version</div>
+                        <div class="info-value" id="osVersion">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Uptime</div>
+                        <div class="info-value" id="uptime">--</div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <div class="collapsible" onclick="toggleCollapse(this)">Audio Hardware Details</div>
+                    <div class="collapsible-content" id="audioHardwareDetails">
+                        <div class="info-item" style="margin-top: 5px;">
+                            <div class="info-label">Sound Card</div>
+                            <div class="info-value" id="soundCard">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">ALSA Devices</div>
+                            <div class="info-value" id="alsaDevices">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">I2C Bus</div>
+                            <div class="info-value" id="i2cBus">--</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <div class="collapsible" onclick="toggleCollapse(this)">Video Hardware Details</div>
+                    <div class="collapsible-content" id="videoHardwareDetails">
+                        <div class="info-item" style="margin-top: 5px;">
+                            <div class="info-label">Display Resolution</div>
+                            <div class="info-value" id="displayRes">1280x400</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">HDMI Mode</div>
+                            <div class="info-value" id="hdmiMode">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Refresh Rate</div>
+                            <div class="info-value" id="refreshRate">58 Hz</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Services Status -->
+            <div class="panel">
+                <div class="panel-header">⚙️ Services Status</div>
+                <div class="service-list" id="servicesList">
+                    <!-- Services werden dynamisch geladen -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- Pipeline Chains -->
+            <div class="panel">
+                <div class="panel-header">🔗 Pipeline Chains</div>
+                <div class="chain-container">
+                    <div>
+                        <div class="chain-title">🎵 Audio Chain</div>
+                        <div class="chain-boxes" id="audioChain">
+                            <!-- Wird dynamisch geladen -->
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div class="chain-title">🎬 Video Chain</div>
+                        <div class="chain-boxes" id="videoChain">
+                            <!-- Wird dynamisch geladen -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Detailed Information Panel -->
+            <div class="panel">
+                <div class="panel-header">📋 Detailed Information</div>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('logs')">System Logs</div>
+                    <div class="tab" onclick="switchTab('network')">Network</div>
+                    <div class="tab" onclick="switchTab('audio')">Audio Details</div>
+                    <div class="tab" onclick="switchTab('video')">Video Details</div>
+                </div>
+                
+                <div id="tab-logs" class="tab-content active">
+                    <div class="log-viewer" id="logViewer">
+                        <div class="log-entry info">System initialized...</div>
+                        <div class="log-entry info">Waiting for data...</div>
+                    </div>
+                </div>
+                
+                <div id="tab-network" class="tab-content">
+                    <div class="info-grid" id="networkInfo">
+                        <!-- Network info -->
+                    </div>
+                </div>
+                
+                <div id="tab-audio" class="tab-content">
+                    <div class="detail-section">
+                        <div class="detail-section-title">ALSA Configuration</div>
+                        <pre style="background: #0d1117; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto;" id="alsaConfig">Loading...</pre>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">MPD Status</div>
+                        <pre style="background: #0d1117; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto;" id="mpdStatus">Loading...</pre>
+                    </div>
+                </div>
+                
+                <div id="tab-video" class="tab-content">
+                    <div class="detail-section">
+                        <div class="detail-section-title">Display Configuration</div>
+                        <pre style="background: #0d1117; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto;" id="displayConfig">Loading...</pre>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">X11 Status</div>
+                        <pre style="background: #0d1117; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto;" id="x11Status">Loading...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Component Details -->
+    <div class="modal" id="componentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="modalTitle">Component Details</span>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modalBody">
+                <!-- Content wird dynamisch geladen -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Component data with detailed information
+        const components = {
+            'Output': {
+                name: 'Audio Output',
+                status: 'pending',
+                details: 'Audio Output Device - Final stage of audio pipeline',
+                metrics: { latency: '--', buffer: '--', format: '--' },
+                tests: ['Device present?', 'ALSA recognizes device?', 'Test tone possible?'],
+                config: 'Waiting for hardware identification',
+                logs: []
+            },
+            'MPD': {
+                name: 'Music Player Daemon',
+                status: 'pending',
+                details: 'Central audio engine - manages playback queue and audio processing',
+                metrics: { version: '--', status: '--', queue: '--' },
+                tests: ['MPD running?', 'Configuration OK?', 'Playback possible?'],
+                config: 'MPD configuration pending',
+                logs: []
+            },
+            'ALSA': {
+                name: 'ALSA',
+                status: 'pending',
+                details: 'Advanced Linux Sound Architecture - Low-level audio driver layer',
+                metrics: { modules: '--', devices: '--', samplerate: '--' },
+                tests: ['ALSA modules loaded?', 'Device tree OK?', 'Mixer available?'],
+                config: 'ALSA configuration pending',
+                logs: []
+            },
+            'Hardware': {
+                name: 'Audio Hardware',
+                status: 'pending',
+                details: 'Physical audio interface (HiFiBerry/DAC) - Hardware abstraction layer',
+                metrics: { detected: '--', i2c: '--', overlay: '--' },
+                tests: ['Hardware detected?', 'I2C connection?', 'Device tree overlay?'],
+                config: 'Hardware scan pending',
+                logs: []
+            },
+            'Display': {
+                name: 'Display',
+                status: 'orange',
+                details: 'Waveshare 7.9" HDMI Display - 1280x400 Landscape',
+                metrics: { resolution: '1280x400', refresh: '58Hz', status: 'Connected' },
+                tests: ['Display detected?', 'Resolution correct?', 'Touchscreen OK?'],
+                config: 'HDMI configured, timing issues detected',
+                logs: ['Display initialized', 'HDMI connection established', 'Timing configuration applied']
+            },
+            'Player': {
+                name: 'Video Player',
+                status: 'pending',
+                details: 'Video playback engine (mpv/vlc) - Handles video decoding and rendering',
+                metrics: { type: '--', codecs: '--', status: '--' },
+                tests: ['Player installed?', 'Codecs available?', 'Playback possible?'],
+                config: 'Video player configuration pending',
+                logs: []
+            },
+            'X11': {
+                name: 'X Window System',
+                status: 'orange',
+                details: 'Display server - Manages graphical interface and window system',
+                metrics: { version: '--', display: ':0', status: 'Running' },
+                tests: ['X11 running?', 'Display configured?', 'Rotation OK?'],
+                config: 'X11 server active, display configured',
+                logs: ['X server started', 'Display configured', 'Rotation applied']
+            },
+            'Video Hardware': {
+                name: 'Video Hardware',
+                status: 'orange',
+                details: 'Physical video interface (HDMI/DSI) - Hardware video output',
+                metrics: { hdmi: 'Connected', edid: '--', timings: '58Hz' },
+                tests: ['HDMI detected?', 'EDID read?', 'Timings correct?'],
+                config: 'HDMI hardware initialized, timing optimization in progress',
+                logs: ['HDMI hardware detected', 'EDID reading attempted', 'Custom timings applied']
+            }
+        };
+        
+        const audioChain = [
+            { name: 'Output', status: 'pending' },
+            { name: 'MPD', status: 'pending' },
+            { name: 'ALSA', status: 'pending' },
+            { name: 'Hardware', status: 'pending' }
+        ];
+        
+        const videoChain = [
+            { name: 'Display', status: 'orange' },
+            { name: 'Player', status: 'pending' },
+            { name: 'X11', status: 'orange' },
+            { name: 'Video Hardware', status: 'orange' }
+        ];
+        
+        function renderChain(chain, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            for (let i = 0; i < chain.length; i++) {
+                const item = chain[i];
+                const comp = components[item.name];
+                
+                const box = document.createElement('div');
+                box.className = `chain-box ${comp.status}`;
+                box.onclick = () => showComponentModal(comp);
+                
+                box.innerHTML = `
+                    <div class="chain-box-header">
+                        <div class="chain-box-name">${comp.name}</div>
+                        <div class="chain-box-status ${comp.status}"></div>
+                    </div>
+                    <div class="chain-box-details">${comp.details}</div>
+                    <div class="chain-box-metrics">
+                        ${Object.entries(comp.metrics).map(([k, v]) => `${k}: ${v}`).join(' | ')}
+                    </div>
+                `;
+                
+                container.appendChild(box);
+                
+                if (i < chain.length - 1) {
+                    const arrow = document.createElement('div');
+                    arrow.className = `chain-arrow ${comp.status === 'active' ? 'active' : ''}`;
+                    container.appendChild(arrow);
+                }
+            }
+        }
+        
+        function showComponentModal(component) {
+            document.getElementById('modalTitle').textContent = component.name;
+            document.getElementById('modalBody').innerHTML = `
+                <div class="detail-section">
+                    <div class="detail-section-title">Details</div>
+                    <p>${component.details}</p>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">Status</div>
+                    <p>Current Status: <strong>${component.status}</strong></p>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">Metrics</div>
+                    <pre style="background: #0d1117; padding: 10px; border-radius: 4px;">${JSON.stringify(component.metrics, null, 2)}</pre>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">Configuration</div>
+                    <pre style="background: #0d1117; padding: 10px; border-radius: 4px;">${component.config}</pre>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">Tests</div>
+                    <ul style="margin-left: 20px;">
+                        ${component.tests.map(t => `<li>${t}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            document.getElementById('componentModal').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('componentModal').style.display = 'none';
+        }
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+        
+        function toggleCollapse(element) {
+            element.classList.toggle('expanded');
+        }
+        
+        function updateSystemMetrics() {
+            // Simulated data - would come from API in real implementation
+            document.getElementById('cpuUsage').textContent = '15%';
+            document.getElementById('cpuBar').style.width = '15%';
+            document.getElementById('memUsage').textContent = '45%';
+            document.getElementById('memBar').style.width = '45%';
+            document.getElementById('temperature').textContent = '42°C';
+            document.getElementById('tempStatus').textContent = 'Normal';
+            document.getElementById('diskUsage').textContent = '68%';
+            document.getElementById('diskBar').style.width = '68%';
+        }
+        
+        function updateHardwareInfo() {
+            document.getElementById('piModel').textContent = 'Raspberry Pi 5';
+            document.getElementById('kernelVersion').textContent = 'Linux 6.x';
+            document.getElementById('osVersion').textContent = 'moOde Audio';
+            document.getElementById('uptime').textContent = '2h 15m';
+        }
+        
+        function updateServices() {
+            const services = [
+                { name: 'MPD', status: 'inactive' },
+                { name: 'X11', status: 'active' },
+                { name: 'ALSA', status: 'active' },
+                { name: 'Network', status: 'active' }
+            ];
+            
+            const container = document.getElementById('servicesList');
+            container.innerHTML = services.map(s => `
+                <div class="service-item ${s.status}">
+                    <span class="service-name">${s.name}</span>
+                    <span class="status-indicator status-${s.status === 'active' ? 'online' : 'offline'}"></span>
+                </div>
+            `).join('');
+        }
+        
+        function addLogEntry(message, type = 'info') {
+            const viewer = document.getElementById('logViewer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            viewer.appendChild(entry);
+            viewer.scrollTop = viewer.scrollHeight;
+        }
+        
+        // Initialize
+        renderChain(audioChain, 'audioChain');
+        renderChain(videoChain, 'videoChain');
+        updateSystemMetrics();
+        updateHardwareInfo();
+        updateServices();
+        
+        // Update timestamp
+        setInterval(() => {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            updateSystemMetrics();
+        }, 5000);
+        
+        // Add sample logs
+        setTimeout(() => {
+            addLogEntry('System initialized', 'success');
+            addLogEntry('Display detected on HDMI-2', 'info');
+            addLogEntry('X11 server started', 'success');
+            addLogEntry('HDMI timing configuration applied (58Hz)', 'info');
+            addLogEntry('ALSA modules loaded', 'success');
+        }, 1000);
+    </script>
+</body>
+</html>
+
+
+

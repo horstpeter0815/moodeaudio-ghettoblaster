@@ -1,0 +1,33 @@
+[Unit]
+Description=SSH Ultra Early - Startet SSH SO FRÜH WIE MÖGLICH
+DefaultDependencies=no
+# Start SO FRÜH WIE MÖGLICH - VOR ALLEM!
+After=local-fs.target
+Before=sysinit.target
+Before=basic.target
+Before=network.target
+Before=moode-startup.service
+# Force start - kann nicht übersprungen werden
+Conflicts=shutdown.target
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+
+Type=oneshot
+RemainAfterExit=yes
+# SSH SO FRÜH WIE MÖGLICH aktivieren - MULTIPLE METHODS
+ExecStart=/usr/local/bin/force-ssh-on.sh
+
+# Run multiple times for safety
+ExecStartPost=/bin/bash -c 'sleep 5; systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true; touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true'
+ExecStartPost=/bin/bash -c 'sleep 10; systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true; systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true'
+
+[Install]
+# Installiere in ALLE möglichen Targets
+WantedBy=local-fs.target
+WantedBy=sysinit.target
+WantedBy=basic.target
+WantedBy=multi-user.target
+RequiredBy=network.target
+

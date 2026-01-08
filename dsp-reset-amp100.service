@@ -1,0 +1,16 @@
+[Unit]
+Description=Reset AMP100 via DSP Add-on GPIO 17 before driver load
+Before=sound.target
+Before=alsa-restore.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/dsp-reset-amp100.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

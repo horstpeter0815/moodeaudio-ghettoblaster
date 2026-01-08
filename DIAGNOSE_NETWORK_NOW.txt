@@ -1,0 +1,47 @@
+# NETWORK DIAGNOSIS - Run these commands on the Pi
+
+# 1. Check all network interfaces
+echo "=== Network Interfaces ==="
+ip addr show
+
+# 2. Check if WiFi interface exists
+echo ""
+echo "=== WiFi Interface ==="
+ip link show wlan0
+iwconfig wlan0 2>/dev/null || echo "wlan0 not found or not configured"
+
+# 3. Check Ethernet interface
+echo ""
+echo "=== Ethernet Interface ==="
+ip link show eth0
+
+# 4. Check if wpa_supplicant.conf was copied from boot partition
+echo ""
+echo "=== WiFi Configuration ==="
+ls -la /boot/firmware/wpa_supplicant.conf 2>/dev/null || echo "No wpa_supplicant.conf on boot partition"
+cat /etc/wpa_supplicant/wpa_supplicant.conf 2>/dev/null | tail -15 || echo "No wpa_supplicant.conf in /etc"
+
+# 5. Check wpa_supplicant service
+echo ""
+echo "=== WiFi Service Status ==="
+sudo systemctl status wpa_supplicant | head -15
+
+# 6. Check networking service
+echo ""
+echo "=== Networking Service ==="
+sudo systemctl status networking | head -15
+
+# 7. Check if Ethernet cable is detected
+echo ""
+echo "=== Ethernet Link Status ==="
+ethtool eth0 2>/dev/null | grep -E "Link detected|Speed" || echo "ethtool not available"
+
+# 8. Try to get DHCP on Ethernet
+echo ""
+echo "=== Try DHCP on Ethernet ==="
+sudo dhclient -v eth0 2>&1 | tail -5
+ip addr show eth0
+
+
+
+

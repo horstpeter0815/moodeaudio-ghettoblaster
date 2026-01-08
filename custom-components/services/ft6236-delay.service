@@ -1,0 +1,18 @@
+[Unit]
+Description=Load FT6236 Touchscreen after Display
+After=localdisplay.service
+After=xserver-ready.service
+Wants=localdisplay.service
+Wants=xserver-ready.service
+Requires=graphical.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 2
+ExecStart=/sbin/modprobe ft6236
+ExecStartPost=/bin/sleep 1
+RemainAfterExit=yes
+TimeoutStartSec=10
+
+[Install]
+WantedBy=graphical.target

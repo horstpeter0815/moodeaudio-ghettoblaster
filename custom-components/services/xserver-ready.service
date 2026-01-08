@@ -1,0 +1,13 @@
+[Unit]
+Description=X Server Ready Check
+After=graphical.target
+Wants=graphical.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/xserver-ready.sh
+RemainAfterExit=yes
+TimeoutStartSec=35
+
+[Install]
+WantedBy=graphical.target

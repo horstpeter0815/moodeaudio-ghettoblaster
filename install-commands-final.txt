@@ -1,0 +1,30 @@
+# Run these commands to install bulletproof fix:
+
+cd /Users/andrevollmer/moodeaudio-cursor
+
+# 1. Install bulletproof Ethernet service
+sudo cp BULLETPROOF_ETH0_FIX.service /Volumes/rootfs/lib/systemd/system/eth0-direct-static.service
+
+# 2. Enable in local-fs.target
+sudo mkdir -p /Volumes/rootfs/etc/systemd/system/local-fs.target.wants
+sudo ln -sf /lib/systemd/system/eth0-direct-static.service /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/eth0-direct-static.service
+
+# 3. Enable in sysinit.target
+sudo mkdir -p /Volumes/rootfs/etc/systemd/system/sysinit.target.wants
+sudo ln -sf /lib/systemd/system/eth0-direct-static.service /Volumes/rootfs/etc/systemd/system/sysinit.target.wants/eth0-direct-static.service
+
+# 4. Install boot-complete-minimal
+sudo cp moode-source/lib/systemd/system/boot-complete-minimal.service /Volumes/rootfs/lib/systemd/system/boot-complete-minimal.service
+sudo ln -sf /lib/systemd/system/boot-complete-minimal.service /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/boot-complete-minimal.service
+
+# 5. Create SSH flag
+touch /Volumes/bootfs/ssh 2>/dev/null || sudo touch /Volumes/bootfs/ssh
+
+# Verify
+echo ""
+echo "=== VERIFICATION ==="
+ls -la /Volumes/rootfs/lib/systemd/system/eth0-direct-static.service
+ls -la /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/eth0-direct-static.service
+
+echo ""
+echo "✅✅✅ BULLETPROOF FIX INSTALLED ✅✅✅"

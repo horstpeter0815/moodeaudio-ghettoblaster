@@ -1,0 +1,76 @@
+================================================================================
+DEPLOYMENT-ANLEITUNG FÜR moOde
+================================================================================
+
+Der Raspberry Pi ist gebootet, aber SSH funktioniert nicht.
+Die Dateien sind auf der SD-Karte unter /boot/moode_deploy/
+
+LÖSUNG: Deployment-Script direkt auf dem Server erstellen
+
+================================================================================
+OPTION 1: Über die moOde Web-UI (wenn File Manager verfügbar)
+================================================================================
+
+1. Öffne: https://10.10.11.39:8443/
+2. Suche nach "File Manager" oder "Editor" in der moOde-Oberfläche
+3. Navigiere zu /var/www/html/
+4. Erstelle eine neue Datei: deploy.php
+5. Kopiere den gesamten Inhalt aus DEPLOY_NOW.php (siehe unten)
+6. Speichere die Datei
+7. Öffne: https://10.10.11.39:8443/deploy.php
+8. Klicke auf "Deploy Now"
+
+================================================================================
+OPTION 2: Über Browser-Konsole (JavaScript)
+================================================================================
+
+1. Öffne: https://10.10.11.39:8443/
+2. Öffne die Browser-Konsole (F12 oder Cmd+Option+I)
+3. Führe folgenden Code aus:
+
+// Versuche, deploy.php zu erstellen
+fetch('/command/room-correction-wizard.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'cmd=create_deploy_script'
+}).then(r => r.text()).then(console.log);
+
+(Falls das nicht funktioniert, siehe Option 3)
+
+================================================================================
+OPTION 3: Manuell über Terminal (wenn Web-Terminal verfügbar)
+================================================================================
+
+1. Öffne: https://10.10.11.39:8443/
+2. Suche nach "Terminal" oder "SSH" in der moOde-Oberfläche
+3. Führe aus:
+
+sudo cp -r /boot/moode_deploy/test-wizard /var/www/html/
+sudo cp /boot/moode_deploy/command/room-correction-wizard.php /var/www/html/command/
+sudo rm /var/www/html/index.html
+
+================================================================================
+OPTION 4: Direkt über PHP (wenn PHP-Datei erstellt werden kann)
+================================================================================
+
+Kopiere den Inhalt von DEPLOY_NOW.php in eine neue Datei deploy.php
+im Web-Root (/var/www/html/deploy.php)
+
+Dann öffne: https://10.10.11.39:8443/deploy.php
+
+================================================================================
+INHALT VON DEPLOY_NOW.php
+================================================================================
+
+Siehe Datei: DEPLOY_NOW.php
+
+================================================================================
+WICHTIG
+================================================================================
+
+- Die Dateien müssen von /boot/moode_deploy/ nach /var/www/html/ kopiert werden
+- index.html muss gelöscht werden (fix redirect)
+- Falls Berechtigungsfehler auftreten, verwende 'sudo'
+
+================================================================================
+

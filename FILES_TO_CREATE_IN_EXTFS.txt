@@ -1,0 +1,113 @@
+# Files to Create via ExtFS
+
+## File 1: Boot Partition - create-user-on-boot.sh
+
+**Location:** `/boot/create-user-on-boot.sh` or `/boot/firmware/create-user-on-boot.sh`
+
+**Content:**
+```
+#!/bin/bash
+# Create user "andre" on first boot
+MARKER="/var/lib/user-andre-created.done"
+[ -f "$MARKER" ] && exit 0
+
+if ! id -u andre &>/dev/null; then
+    groupadd -g 1000 andre 2>/dev/null || true
+    useradd -m -s /bin/bash -u 1000 -g 1000 andre 2>/dev/null || {
+        echo "andre:x:1000:1000:andre:/home/andre:/bin/bash" >> /etc/passwd
+        echo "andre:x:1000:" >> /etc/group
+        mkdir -p /home/andre && chown 1000:1000 /home/andre
+    }
+    echo "andre:0815" | chpasswd 2>/dev/null || true
+    echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre
+    chmod 0440 /etc/sudoers.d/andre
+    mkdir -p /home/andre/.ssh && chmod 700 /home/andre/.ssh
+    chown -R andre:andre /home/andre
+    echo "✅ User 'andre' created"
+fi
+
+systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true
+systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true
+touch /boot/ssh 2>/dev/null || touch /boot/firmware/ssh 2>/dev/null || true
+touch "$MARKER"
+exit 0
+```
+
+**Permissions:** Make executable (chmod +x)
+
+---
+
+## File 2: Rootfs - Update rc.local
+
+**Location:** `/etc/rc.local` in rootfs
+
+**Current content shows:**
+```
+#!/bin/bash
+# rc.local - Independent SSH Activation Fallback
+# This runs if systemd fails or as additional safety layer
+
+# Run SSH activation script
+/boot/firmware/ssh-activate.sh 2>/dev/null || true
+
+exit 0
+```
+
+**Add this line BEFORE `exit 0`:**
+```
+# Create user andre on first boot
+/boot/firmware/create-user-on-boot.sh 2>/dev/null || /boot/create-user-on-boot.sh 2>/dev/null || true
+```
+
+**Final rc.local should be:**
+```
+#!/bin/bash
+# rc.local - Independent SSH Activation Fallback
+# This runs if systemd fails or as additional safety layer
+
+# Create user andre on first boot
+/boot/firmware/create-user-on-boot.sh 2>/dev/null || /boot/create-user-on-boot.sh 2>/dev/null || true
+
+# Run SSH activation script
+/boot/firmware/ssh-activate.sh 2>/dev/null || true
+
+exit 0
+```
+
+---
+
+## File 3: Rootfs - Systemd Service (Optional)
+
+**Location:** `/etc/systemd/system/create-user-andre.service`
+
+**Content:**
+```
+[Unit]
+Description=Create User andre on First Boot
+After=local-fs.target
+Before=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/boot/firmware/create-user-on-boot.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Then create symlink:**
+```
+/etc/systemd/system/multi-user.target.wants/create-user-andre.service -> /etc/systemd/system/create-user-andre.service
+```
+
+---
+
+## Summary
+
+1. Create `create-user-on-boot.sh` on boot partition
+2. Update `rc.local` in rootfs to call the script
+3. (Optional) Create systemd service
+
+After boot, user "andre" with password "0815" will exist and SSH will be enabled.
+

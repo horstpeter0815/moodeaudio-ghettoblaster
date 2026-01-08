@@ -1,0 +1,10 @@
+# Correct Ethernet Commands - Copy exactly
+
+sudo ip link set eth0 up
+sudo systemctl restart NetworkManager
+sleep 5
+ip addr show eth0
+
+
+
+

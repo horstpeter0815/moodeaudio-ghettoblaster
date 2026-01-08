@@ -1,0 +1,80 @@
+[Unit]
+Description=Network Guaranteed Fix - Ensures Network Always Works
+After=network-pre.target
+Before=network.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# MULTIPLE SAFETY LAYERS für Netzwerk
+ExecStart=/bin/bash -c '
+    # Layer 1: Statische IP für eth0 (192.168.10.2 - Direct LAN to Mac)
+    if ip link show eth0 >/dev/null 2>&1; then
+        # Netplan Config (falls vorhanden)
+        mkdir -p /etc/netplan 2>/dev/null || true
+        cat > /etc/netplan/01-eth0-static.yaml << NETPLAN_EOF
+network:
+  version: 2
+  renderer: NetworkManager
+  ethernets:
+    eth0:
+      dhcp4: no
+      addresses:
+        - 192.168.10.2/24
+      gateway4: 192.168.10.1
+      nameservers:
+        addresses:
+          - 192.168.10.1
+          - 8.8.8.8
+NETPLAN_EOF
+        netplan apply 2>/dev/null || true
+        
+        # systemd-networkd Config (Fallback)
+        mkdir -p /etc/systemd/network 2>/dev/null || true
+        cat > /etc/systemd/network/10-eth0-static.network << NETWORKD_EOF
+[Match]
+Name=eth0
+
+[Network]
+Address=192.168.10.2/24
+Gateway=192.168.10.1
+DNS=192.168.10.1
+DNS=8.8.8.8
+NETWORKD_EOF
+        
+        # ifconfig Fallback (wenn alles andere fehlschlägt)
+        ifconfig eth0 192.168.10.2 netmask 255.255.255.0 2>/dev/null || true
+        route add default gw 192.168.10.1 2>/dev/null || true
+        echo "nameserver 192.168.10.1" > /etc/resolv.conf 2>/dev/null || true
+        echo "nameserver 8.8.8.8" >> /etc/resolv.conf 2>/dev/null || true
+    fi
+    
+    # Layer 2: DHCP für wlan0 (falls vorhanden)
+    if ip link show wlan0 >/dev/null 2>&1; then
+        # WPA Supplicant sollte bereits konfiguriert sein
+        systemctl start wpa_supplicant@wlan0 2>/dev/null || true
+        systemctl enable wpa_supplicant@wlan0 2>/dev/null || true
+    fi
+    
+    # Layer 3: Network Services neu starten
+    systemctl restart systemd-networkd 2>/dev/null || true
+    systemctl restart NetworkManager 2>/dev/null || true
+    
+    # Layer 4: IP-Adresse prüfen und setzen (falls nicht gesetzt)
+    ETH0_IP=$(ip addr show eth0 2>/dev/null | grep "inet " | awk "{print \$2}" | cut -d/ -f1)
+    if [ -z "$ETH0_IP" ] || [ "$ETH0_IP" != "192.168.10.2" ]; then
+        echo "⚠️  eth0 hat falsche IP: $ETH0_IP - setze auf 192.168.10.2"
+        ifconfig eth0 192.168.10.2 netmask 255.255.255.0 2>/dev/null || true
+        route add default gw 192.168.10.1 2>/dev/null || true
+    fi
+    
+    echo "✅ Network Guaranteed Fix applied"
+'
+
+# Run every 60 seconds for first 10 minutes (safety net)
+ExecStartPost=/bin/bash -c 'for i in {1..10}; do sleep 60; /bin/bash -c "ETH0_IP=$(ip addr show eth0 2>/dev/null | grep \"inet \" | awk \"{print \\\$2}\" | cut -d/ -f1); if [ -z \"$ETH0_IP\" ] || [ \"$ETH0_IP\" != \"192.168.10.2\" ]; then ifconfig eth0 192.168.10.2 netmask 255.255.255.0 2>/dev/null || true; route add default gw 192.168.10.1 2>/dev/null || true; fi" & done'
+
+[Install]
+WantedBy=network-online.target
+WantedBy=multi-user.target

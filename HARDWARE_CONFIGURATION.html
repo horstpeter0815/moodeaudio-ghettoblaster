@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Hardware Configuration - moOde Audio System</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 5px;
+        }
+        h3 {
+            color: #555;
+            margin-top: 20px;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        ul, ol {
+            margin-left: 20px;
+        }
+        li {
+            margin: 5px 0;
+        }
+        strong {
+            color: #2c3e50;
+        }
+        .meta {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-bottom: 30px;
+        }
+        hr {
+            border: none;
+            border-top: 2px solid #ecf0f1;
+            margin: 30px 0;
+        }
+        @media print {
+            body {
+                margin: 0;
+                padding: 20px;
+            }
+            h1, h2 {
+                page-break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Hardware Configuration - moOde Audio System</h1>
+    
+    <div class="meta">
+        <strong>Date:</strong> 2025-01-03<br>
+        <strong>System:</strong> Raspberry Pi 5 with HiFiBerry AMP100 and WaveShare Display
+    </div>
+
+    <hr>
+
+    <h2>Hardware Components</h2>
+
+    <h3>1. Raspberry Pi 5</h3>
+    <ul>
+        <li><strong>Model:</strong> Raspberry Pi 5</li>
+        <li><strong>Connection:</strong> Directly connected to HiFiBerry AMP100 via GPIO header</li>
+        <li><strong>Function:</strong> Main system running moOde Audio</li>
+    </ul>
+
+    <h3>2. HiFiBerry AMP100</h3>
+    <ul>
+        <li><strong>Model:</strong> HiFiBerry AMP100</li>
+        <li><strong>Addon Board:</strong> Built-in DSP Addon Board</li>
+        <li><strong>Power Supply:</strong> 20V, 8A (160W)</li>
+        <li><strong>Connection:</strong>
+            <ul>
+                <li>Connected directly to Raspberry Pi 5 via GPIO header</li>
+                <li>Power supply: 20V/8A connector</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>3. WaveShare Display</h3>
+    <ul>
+        <li><strong>Model:</strong> WaveShare Display (7.9" HDMI)</li>
+        <li><strong>Connections:</strong>
+            <ul>
+                <li><strong>HDMI:</strong> Connected to Raspberry Pi 5 via HDMI cable</li>
+                <li><strong>Touch:</strong> Connected to Raspberry Pi 5 via USB cable</li>
+                <li><strong>Power:</strong> Connected to Raspberry Pi 5 via USB cable (power supply)</li>
+            </ul>
+        </li>
+    </ul>
+
+    <hr>
+
+    <h2>Connection Diagram</h2>
+
+    <pre>
+┌─────────────────────┐
+│  WaveShare Display  │
+│   (7.9" HDMI)       │
+├─────────────────────┤
+│  HDMI ────────────┐ │
+│  USB (Touch) ─────┼─┼─┐
+│  USB (Power) ─────┼─┼─┼─┐
+└─────────────────────┘ │ │ │
+                        │ │ │
+        ┌───────────────┘ │ │
+        │                 │ │
+┌───────▼─────────────────▼─▼─┐
+│    Raspberry Pi 5           │
+│                              │
+│  GPIO Header                │
+│       │                      │
+└───────┼──────────────────────┘
+        │
+        │ GPIO Connection
+        │
+┌───────▼──────────────────────┐
+│   HiFiBerry AMP100           │
+│   (with DSP Addon Board)     │
+│                              │
+│  Power: 20V / 8A ─────────┐  │
+└────────────────────────────┘  │
+                                 │
+                          ┌──────▼──────┐
+                          │  Power Supply│
+                          │   20V / 8A   │
+                          │    (160W)    │
+                          └─────────────┘
+    </pre>
+
+    <hr>
+
+    <h2>Connection Details</h2>
+
+    <h3>HiFiBerry AMP100 to Raspberry Pi 5</h3>
+    <ul>
+        <li><strong>Type:</strong> Direct GPIO header connection</li>
+        <li><strong>Interface:</strong> GPIO pins on Raspberry Pi 5</li>
+        <li><strong>Purpose:</strong> Audio output and control</li>
+    </ul>
+
+    <h3>WaveShare Display Connections</h3>
+    <ol>
+        <li><strong>HDMI Connection:</strong>
+            <ul>
+                <li><strong>From:</strong> WaveShare Display HDMI port</li>
+                <li><strong>To:</strong> Raspberry Pi 5 HDMI port</li>
+                <li><strong>Purpose:</strong> Video/Display output</li>
+            </ul>
+        </li>
+        <li><strong>USB Touch Connection:</strong>
+            <ul>
+                <li><strong>From:</strong> WaveShare Display USB port (Touch)</li>
+                <li><strong>To:</strong> Raspberry Pi 5 USB port</li>
+                <li><strong>Purpose:</strong> Touchscreen input</li>
+            </ul>
+        </li>
+        <li><strong>USB Power Connection:</strong>
+            <ul>
+                <li><strong>From:</strong> WaveShare Display USB port (Power)</li>
+                <li><strong>To:</strong> Raspberry Pi 5 USB port</li>
+                <li><strong>Purpose:</strong> Power supply for display</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>HiFiBerry AMP100 Power</h3>
+    <ul>
+        <li><strong>Voltage:</strong> 20V</li>
+        <li><strong>Current:</strong> 8A</li>
+        <li><strong>Power:</strong> 160W</li>
+        <li><strong>Connector:</strong> Dedicated power connector on AMP100</li>
+    </ul>
+
+    <hr>
+
+    <h2>System Specifications</h2>
+
+    <h3>Audio System</h3>
+    <ul>
+        <li><strong>DAC/Amp:</strong> HiFiBerry AMP100</li>
+        <li><strong>DSP:</strong> Built-in DSP Addon Board</li>
+        <li><strong>Power:</strong> 20V/8A (160W) power supply</li>
+        <li><strong>Connection:</strong> Direct GPIO to Raspberry Pi 5</li>
+    </ul>
+
+    <h3>Display System</h3>
+    <ul>
+        <li><strong>Display:</strong> WaveShare 7.9" HDMI Display</li>
+        <li><strong>Resolution:</strong> 1280x400 (landscape, rotated)</li>
+        <li><strong>Touch:</strong> USB touch interface</li>
+        <li><strong>Connections:</strong> HDMI + 2x USB (touch + power)</li>
+    </ul>
+
+    <h3>Computing</h3>
+    <ul>
+        <li><strong>Board:</strong> Raspberry Pi 5</li>
+        <li><strong>OS:</strong> moOde Audio (Linux-based audio player)</li>
+        <li><strong>Network:</strong> Ethernet/WiFi capable</li>
+        <li><strong>Storage:</strong> SD card</li>
+    </ul>
+
+    <hr>
+
+    <h2>Power Requirements</h2>
+
+    <h3>Total System Power</h3>
+    <ul>
+        <li><strong>HiFiBerry AMP100:</strong> 20V / 8A (160W)</li>
+        <li><strong>Raspberry Pi 5:</strong> ~5V / 3A (15W) - supplied via GPIO from AMP100 or separate</li>
+        <li><strong>WaveShare Display:</strong> Supplied via USB from Raspberry Pi 5</li>
+        <li><strong>Total:</strong> ~175W peak</li>
+    </ul>
+
+    <h3>Power Supply</h3>
+    <ul>
+        <li><strong>Main:</strong> 20V / 8A (160W) for HiFiBerry AMP100</li>
+        <li><strong>Note:</strong> Raspberry Pi 5 and display may require separate power or be powered via GPIO/USB</li>
+    </ul>
+
+    <hr>
+
+    <h2>Physical Setup</h2>
+
+    <ol>
+        <li><strong>HiFiBerry AMP100</strong> is mounted directly on Raspberry Pi 5 via GPIO header</li>
+        <li><strong>WaveShare Display</strong> is positioned separately and connected via cables:
+            <ul>
+                <li>HDMI cable for video</li>
+                <li>USB cable for touch input</li>
+                <li>USB cable for power</li>
+            </ul>
+        </li>
+        <li><strong>Power supply</strong> (20V/8A) connected to HiFiBerry AMP100</li>
+    </ol>
+
+    <hr>
+
+    <h2>Software Configuration</h2>
+
+    <ul>
+        <li><strong>OS:</strong> moOde Audio Player</li>
+        <li><strong>User:</strong> andre</li>
+        <li><strong>Audio Output:</strong> HiFiBerry AMP100 (configured in moOde)</li>
+        <li><strong>Display:</strong> WaveShare 7.9" (rotated to landscape 1280x400)</li>
+        <li><strong>Network:</strong> Ethernet or WiFi (configurable)</li>
+    </ul>
+
+    <hr>
+
+    <h2>Notes</h2>
+
+    <ul>
+        <li>All connections should be secure and properly seated</li>
+        <li>Power supply for AMP100 must provide 20V/8A (160W)</li>
+        <li>Display requires both HDMI and USB connections</li>
+        <li>Touch interface requires USB connection to function</li>
+        <li>System runs moOde Audio software for audio playback</li>
+    </ul>
+
+    <hr>
+
+    <p><em>Hardware configuration documented. System ready for setup and use.</em></p>
+
+</body>
+</html>
+
+
+
+

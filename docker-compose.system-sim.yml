@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  system-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.system-sim
+    container_name: system-simulator
+    volumes:
+      # Mount all custom services
+      - "./custom-components/services:/lib/systemd/system/custom:ro"
+      # Mount all custom scripts
+      - "./custom-components/scripts:/usr/local/bin/custom:ro"
+      # Mount test directory
+      - "./system-sim-test:/test:rw"
+      # Mount logs
+      - "./system-sim-logs:/var/log/sim:rw"
+      # Mount systemd (required for systemd to work in Docker)
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      # Mount boot directory (mock)
+      - "./system-sim-boot:/boot/firmware:rw"
+      # Mount mock moOde directory
+      - "./system-sim-moode:/var/www/daemon:rw"
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - TZ=UTC
+      - DISPLAY=:0
+      - XAUTHORITY=/home/andre/.Xauthority
+    stdin_open: true
+    tty: true
+    privileged: true
+    network_mode: host
+    # Override entrypoint to start systemd
+    entrypoint: ["/lib/systemd/systemd"]
+    command: ["--system", "--unit=multi-user.target", "--log-level=info"]
+    # Health check
+    healthcheck:
+      test: ["CMD", "systemctl", "is-system-running"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  system-sim-test:
+  system-sim-logs:
+  system-sim-boot:
+  system-sim-moode:
+

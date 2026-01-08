@@ -1,0 +1,15 @@
+# Run these commands to deploy wizard files:
+
+sudo mkdir -p /Volumes/rootfs/var/www/html/test-wizard
+sudo mkdir -p /Volumes/rootfs/var/www/html/command
+
+sudo cp test-wizard/wizard-functions.js /Volumes/rootfs/var/www/html/test-wizard/wizard-functions.js
+sudo chmod 644 /Volumes/rootfs/var/www/html/test-wizard/wizard-functions.js
+
+sudo cp moode-source/www/command/room-correction-wizard.php /Volumes/rootfs/var/www/html/command/room-correction-wizard.php
+sudo chmod 644 /Volumes/rootfs/var/www/html/command/room-correction-wizard.php
+
+# Verify:
+ls -la /Volumes/rootfs/var/www/html/test-wizard/wizard-functions.js
+ls -la /Volumes/rootfs/var/www/html/command/room-correction-wizard.php
+

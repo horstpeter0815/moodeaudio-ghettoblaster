@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  wizard-test-server:
+    image: php:8.1-apache
+    container_name: wizard-test-server
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./test-wizard:/var/www/html
+      - ./test-wizard/ssl:/ssl-certs:ro
+      - ./test-wizard/start-apache.sh:/start-apache.sh:ro
+      - ./test-wizard/ssl-000-default.conf:/etc/apache2/sites-available/000-default-ssl.conf:ro
+    environment:
+      - APACHE_DOCUMENT_ROOT=/var/www/html
+    command: ["/bin/bash", "/start-apache.sh"]
+    networks:
+      - wizard-test-network
+
+networks:
+  wizard-test-network:
+    driver: bridge
+

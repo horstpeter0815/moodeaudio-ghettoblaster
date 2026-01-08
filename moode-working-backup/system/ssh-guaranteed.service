@@ -1,0 +1,70 @@
+[Unit]
+Description=SSH Guaranteed Fix - Multiple Safety Layers
+DefaultDependencies=no
+# Start SO FRÜH WIE MÖGLICH - VOR ALLEM ANDEREN
+After=local-fs.target
+Before=network.target
+Before=cloud-init.target
+Before=moode-startup.service
+Before=sysinit.target
+# Force start - kann nicht übersprungen werden
+Conflicts=shutdown.target
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+
+Type=oneshot
+RemainAfterExit=yes
+# MULTIPLE SAFETY LAYERS - Kann nicht überschrieben werden
+ExecStart=/bin/bash -c '
+    # Layer 1: SSH Flag-Datei (wird von Raspberry Pi OS erkannt)
+    touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true
+    
+    # Layer 2: SSH Service aktivieren (systemd)
+    systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true
+    systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true
+    
+    # Layer 3: SSH Service maskieren (kann nicht deaktiviert werden)
+    systemctl unmask ssh 2>/dev/null || systemctl unmask sshd 2>/dev/null || true
+    
+    # Layer 4: SSH Config sicherstellen
+    mkdir -p /etc/ssh 2>/dev/null || true
+    if [ ! -f /etc/ssh/sshd_config ]; then
+        ssh-keygen -A 2>/dev/null || true
+    fi
+    
+    # Layer 5: Port 22 sicherstellen
+    sed -i "s/#Port 22/Port 22/" /etc/ssh/sshd_config 2>/dev/null || true
+    sed -i "s/Port [0-9]*/Port 22/" /etc/ssh/sshd_config 2>/dev/null || true
+    
+    # Layer 6: SSH Keys generieren falls fehlen
+    if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
+        ssh-keygen -A 2>/dev/null || true
+    fi
+    
+    # Layer 7: Permissions sicherstellen
+    chmod 600 /etc/ssh/sshd_config 2>/dev/null || true
+    chmod 644 /etc/ssh/*.pub 2>/dev/null || true
+    
+    # Layer 8: Service neu starten
+    systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
+    
+    # Layer 9: Firewall-Regel (falls vorhanden)
+    ufw allow 22/tcp 2>/dev/null || true
+    iptables -A INPUT -p tcp --dport 22 -j ACCEPT 2>/dev/null || true
+    
+    echo "✅ SSH Guaranteed Fix applied - Multiple layers active"
+'
+
+# Run every 30 seconds for first 5 minutes (safety net)
+ExecStartPost=/bin/bash -c 'for i in {1..10}; do sleep 30; systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true; touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true; done &'
+
+[Install]
+# Installiere in MEHRERE Targets für maximale Sicherheit
+WantedBy=sysinit.target
+WantedBy=basic.target
+WantedBy=local-fs.target
+WantedBy=multi-user.target
+# Erstelle auch manuellen Symlink falls nötig
+RequiredBy=network.target

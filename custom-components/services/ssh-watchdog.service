@@ -1,0 +1,34 @@
+[Unit]
+Description=SSH Watchdog - Ensures SSH is always running
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+
+Type=simple
+Restart=always
+RestartSec=10
+ExecStart=/bin/bash -c '
+    while true; do
+        # Prüfe ob SSH läuft
+        if ! systemctl is-active --quiet ssh && ! systemctl is-active --quiet sshd; then
+            echo "⚠️  SSH nicht aktiv - starte..."
+            systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true
+            systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true
+            touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true
+        fi
+        
+        # Prüfe ob Port 22 offen ist
+        if ! netstat -tuln 2>/dev/null | grep -q ":22 "; then
+            echo "⚠️  Port 22 nicht offen - starte SSH..."
+            systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
+        fi
+        
+        sleep 30
+    done
+'
+
+[Install]
+WantedBy=multi-user.target

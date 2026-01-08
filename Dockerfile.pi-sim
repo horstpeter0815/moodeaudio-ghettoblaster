@@ -1,0 +1,52 @@
+# Dockerfile for Pi Boot Simulation
+# Simulates Raspberry Pi boot process to test services and fixes
+
+FROM debian:bookworm-slim
+
+# Install systemd and required packages
+RUN apt-get update && \
+    apt-get install -y \
+    systemd \
+    systemd-sysv \
+    dbus \
+    sudo \
+    openssh-server \
+    curl \
+    wget \
+    net-tools \
+    iputils-ping \
+    hostname \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create user 'andre' with UID 1000 (moOde requirement)
+RUN groupadd -g 1000 andre && \
+    useradd -m -s /bin/bash -u 1000 -g 1000 andre && \
+    echo "andre:0815" | chpasswd && \
+    usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre
+
+# Add andre to sudoers
+RUN echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre && \
+    chmod 0440 /etc/sudoers.d/andre
+
+# Set hostname
+RUN echo "GhettoBlaster" > /etc/hostname && \
+    echo "127.0.1.1\tGhettoBlaster" >> /etc/hosts
+
+# Enable SSH
+RUN systemctl enable ssh || systemctl enable sshd || true
+
+# Create directories for services
+RUN mkdir -p /lib/systemd/system /usr/local/bin /var/log
+
+# Copy test services (will be mounted from host)
+# These will be copied during docker-compose setup
+
+# Prevent systemd from starting services that require hardware
+RUN systemctl mask getty@tty1.service || true
+
+# Expose SSH port
+EXPOSE 22
+
+# Start systemd
+CMD ["/lib/systemd/systemd"]
+

@@ -1,0 +1,96 @@
+{
+  "name": "Ghetto Crew Flat EQ",
+  "description": "Factory Flat EQ für Ghetto Crew System (Bose 901 + Fostex)",
+  "type": "equalizer",
+  "version": "1.0",
+  "bands": [
+    {
+      "freq": 20,
+      "gain": 0.0,
+      "q": 1.0,
+      "enabled": true,
+      "description": "Sub-bass"
+    },
+    {
+      "freq": 100,
+      "gain": 0.0,
+      "q": 1.0,
+      "enabled": true,
+      "description": "Bass"
+    },
+    {
+      "freq": 130,
+      "gain": -5.0,
+      "q": 2.0,
+      "enabled": true,
+      "description": "Bose 901 Mid-Bass Kompensation"
+    },
+    {
+      "freq": 225,
+      "gain": -5.0,
+      "q": 2.0,
+      "enabled": true,
+      "description": "Bose 901 Mid-Bass Peak Kompensation"
+    },
+    {
+      "freq": 250,
+      "gain": -5.0,
+      "q": 2.0,
+      "enabled": true,
+      "description": "Bose 901 Mid-Bass Ende"
+    },
+    {
+      "freq": 500,
+      "gain": 0.0,
+      "q": 1.0,
+      "enabled": true,
+      "description": "Mid"
+    },
+    {
+      "freq": 1000,
+      "gain": 0.0,
+      "q": 1.0,
+      "enabled": true,
+      "description": "Mid"
+    },
+    {
+      "freq": 3000,
+      "gain": 0.0,
+      "q": 1.0,
+      "enabled": true,
+      "description": "Mid-Treble"
+    },
+    {
+      "freq": 6000,
+      "gain": 7.0,
+      "q": 2.0,
+      "enabled": true,
+      "description": "Bose 901 6kHz Dip Kompensation"
+    },
+    {
+      "freq": 10000,
+      "gain": 0.0,
+      "q": 1.0,
+      "enabled": true,
+      "description": "Treble"
+    },
+    {
+      "freq": 15000,
+      "gain": 0.0,
+      "q": 1.0,
+      "enabled": true,
+      "description": "High Treble"
+    },
+    {
+      "freq": 20000,
+      "gain": 0.0,
+      "q": 1.0,
+      "enabled": true,
+      "description": "Super High"
+    }
+  ],
+  "master_gain": 0.0,
+  "enabled": false,
+  "notes": "Basierend auf BOSE_901_MEASUREMENTS.md - Kompensiert Frequency Response für gerade Linie"
+}
+

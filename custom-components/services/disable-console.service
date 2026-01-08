@@ -1,0 +1,13 @@
+[Unit]
+Description=Disable Console on tty1 (Ghettoblaster)
+After=multi-user.target
+Before=localdisplay.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl stop getty@tty1.service
+ExecStart=/bin/systemctl mask getty@tty1.service
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

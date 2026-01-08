@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  display-chain-simulator:
+    image: debian:bookworm-slim
+    container_name: display-chain-simulator
+    privileged: true
+    volumes:
+      - ../test-display:/test-display
+      - ../custom-components/scripts:/scripts:ro
+      - ../moode-source/lib/systemd/system:/systemd-services:ro
+      - ../boot-config:/boot-config:ro
+      - display-logs:/var/log/display-chain
+    environment:
+      - DISPLAY=:0
+      - XAUTHORITY=/home/test/.Xauthority
+    command: /test-display/start-simulation.sh
+    stdin_open: true
+    tty: true
+    networks:
+      - display-test-network
+
+volumes:
+  display-logs:
+    driver: local
+
+networks:
+  display-test-network:
+    driver: bridge

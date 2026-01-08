@@ -1,0 +1,15 @@
+[Unit]
+Description=Auto-Fix Display Service on Boot
+After=network.target
+Before=localdisplay.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/auto-fix-display.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

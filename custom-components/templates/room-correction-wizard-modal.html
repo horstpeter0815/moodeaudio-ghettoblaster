@@ -1,0 +1,237 @@
+<!-- Room Correction Wizard Modal -->
+<div id="room-correction-wizard-modal" class="modal fade" tabindex="-1" role="dialog" style="display: none;">
+	<div class="modal-dialog modal-lg" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title">Room Correction Wizard</h4>
+			</div>
+			<div class="modal-body">
+				<!-- Step 1: Instructions -->
+				<div id="wizard-step-1" class="wizard-step">
+					<h5>Step 1: Vorbereitung</h5>
+					<ol>
+						<li>Positioniere dein Smartphone am Hörplatz</li>
+						<li>Stelle sicher, dass Mikrofon-Zugriff erlaubt ist</li>
+						<li>Reduziere Umgebungsgeräusche</li>
+					</ol>
+					<button class="btn btn-primary btn-medium" onclick="wizardNextStep()">Start Measurement</button>
+				</div>
+
+				<!-- Step 2: Play Test Tone -->
+				<div id="wizard-step-2" class="wizard-step" style="display: none;">
+					<h5>Step 2: Test-Ton abspielen</h5>
+					<p>Test-Ton wird jetzt abgespielt. Stelle sicher, dass dein Smartphone das Signal aufnimmt.</p>
+					<div id="test-tone-progress">
+						<div class="progress">
+							<div class="progress-bar" role="progressbar" style="width: 0%"></div>
+						</div>
+						<p id="test-tone-status">Bereite Test-Ton vor...</p>
+					</div>
+					<div id="measurement-recording" style="display: none;">
+						<p>📱 Aufnahme läuft auf Smartphone...</p>
+						<canvas id="frequency-response-canvas" width="600" height="200"></canvas>
+					</div>
+				</div>
+
+				<!-- Step 3: Upload Measurement -->
+				<div id="wizard-step-3" class="wizard-step" style="display: none;">
+					<h5>Step 3: Messung hochladen</h5>
+					<p>Wähle die aufgenommene Messung aus oder verwende Browser-Messung:</p>
+					<div>
+						<input type="file" id="measurement-file" accept="audio/wav,audio/wave" />
+						<button class="btn btn-primary btn-medium" onclick="uploadMeasurement()">Upload Measurement</button>
+					</div>
+					<div id="browser-measurement" style="margin-top: 20px;">
+						<button class="btn btn-primary btn-medium" onclick="startBrowserMeasurement()">Browser-basierte Messung</button>
+						<div id="browser-recording-status" style="display: none;">
+							<p>🔴 Recording...</p>
+							<button class="btn btn-danger" onclick="stopBrowserMeasurement()">Stop Recording</button>
+						</div>
+					</div>
+				</div>
+
+				<!-- Step 4: Analyze & Generate -->
+				<div id="wizard-step-4" class="wizard-step" style="display: none;">
+					<h5>Step 4: Analyse & Filter-Generierung</h5>
+					<div id="frequency-response-graph">
+						<canvas id="analysis-canvas" width="600" height="300"></canvas>
+					</div>
+					<div>
+						<label>Target Curve:</label>
+						<select id="target-curve" class="config-select-large">
+							<option value="flat">Flat (0 dB)</option>
+							<option value="house_curve">House Curve (Harman Target)</option>
+						</select>
+					</div>
+					<button class="btn btn-primary btn-medium" onclick="generateFilter()">Generate Filter</button>
+				</div>
+
+				<!-- Step 5: Apply & Test -->
+				<div id="wizard-step-5" class="wizard-step" style="display: none;">
+					<h5>Step 5: Filter anwenden</h5>
+					<div id="before-after-graph">
+						<canvas id="before-after-canvas" width="600" height="300"></canvas>
+					</div>
+					<div>
+						<label>Preset Name:</label>
+						<input type="text" id="preset-name" class="config-input-large" value="room_correction_<?php echo date('Y-m-d_H-i-s'); ?>" />
+					</div>
+					<button class="btn btn-primary btn-medium" onclick="applyFilter()">Apply Filter</button>
+					<button class="btn btn-secondary btn-medium" onclick="testAB()">A/B Test</button>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+let wizardStep = 1;
+let measurementData = null;
+let frequencyResponse = null;
+
+function startRoomCorrectionWizard() {
+	wizardStep = 1;
+	$('#room-correction-wizard-modal').modal('show');
+	showWizardStep(1);
+}
+
+function wizardNextStep() {
+	wizardStep++;
+	if (wizardStep === 2) {
+		playTestTone();
+	} else if (wizardStep === 3) {
+		showWizardStep(3);
+	}
+}
+
+function showWizardStep(step) {
+	for (let i = 1; i <= 5; i++) {
+		$('#wizard-step-' + i).hide();
+	}
+	$('#wizard-step-' + step).show();
+	wizardStep = step;
+}
+
+function playTestTone() {
+	showWizardStep(2);
+	// TODO: Implement test tone playback
+	// Send command to server to play test tone
+	$.post('/command/room-correction-wizard.php', {
+		cmd: 'start_wizard'
+	}, function(data) {
+		if (data.status === 'ok') {
+			// Start playing test tone
+			// Update progress bar
+			setTimeout(function() {
+				wizardNextStep();
+			}, 30000); // 30 seconds
+		}
+	});
+}
+
+function uploadMeasurement() {
+	const fileInput = document.getElementById('measurement-file');
+	if (!fileInput.files.length) {
+		alert('Bitte wähle eine Messung aus');
+		return;
+	}
+	
+	const formData = new FormData();
+	formData.append('measurement', fileInput.files[0]);
+	formData.append('cmd', 'upload_measurement');
+	
+	$.ajax({
+		url: '/command/room-correction-wizard.php',
+		type: 'POST',
+		data: formData,
+		processData: false,
+		contentType: false,
+		success: function(data) {
+			if (data.status === 'ok') {
+				analyzeMeasurement();
+			} else {
+				alert('Error: ' + data.message);
+			}
+		}
+	});
+}
+
+function startBrowserMeasurement() {
+	// Use Web Audio API for browser-based measurement
+	navigator.mediaDevices.getUserMedia({ audio: true })
+		.then(stream => {
+			$('#browser-recording-status').show();
+			// TODO: Implement browser-based measurement
+			// Record audio stream
+			// Send to server
+		})
+		.catch(err => {
+			alert('Mikrofon-Zugriff verweigert: ' + err.message);
+		});
+}
+
+function analyzeMeasurement() {
+	$.post('/command/room-correction-wizard.php', {
+		cmd: 'analyze_measurement'
+	}, function(data) {
+		if (data.status === 'ok') {
+			frequencyResponse = data.frequency_response;
+			showWizardStep(4);
+			drawFrequencyResponse();
+		}
+	});
+}
+
+function generateFilter() {
+	const targetCurve = $('#target-curve').val();
+	$.post('/command/room-correction-wizard.php', {
+		cmd: 'generate_filter',
+		target_curve: targetCurve
+	}, function(data) {
+		if (data.status === 'ok') {
+			showWizardStep(5);
+			drawBeforeAfter();
+		}
+	});
+}
+
+function applyFilter() {
+	const presetName = $('#preset-name').val();
+	$.post('/command/room-correction-wizard.php', {
+		cmd: 'apply_filter',
+		preset_name: presetName
+	}, function(data) {
+		if (data.status === 'ok') {
+			alert('Filter applied successfully!');
+			$('#room-correction-wizard-modal').modal('hide');
+			location.reload(); // Reload to show new preset
+		}
+	});
+}
+
+function toggleRoomCorrectionAB() {
+	const currentState = $('#btn-room-correction-ab').data('enabled') || false;
+	$.post('/command/room-correction-wizard.php', {
+		cmd: 'toggle_ab_test',
+		enabled: !currentState
+	}, function(data) {
+		if (data.status === 'ok') {
+			$('#btn-room-correction-ab').data('enabled', data.enabled);
+			$('#btn-room-correction-ab').text(data.enabled ? 'A/B: ON' : 'A/B: OFF');
+		}
+	});
+}
+
+function drawFrequencyResponse() {
+	// TODO: Draw frequency response graph
+}
+
+function drawBeforeAfter() {
+	// TODO: Draw before/after comparison
+}
+</script>
+

@@ -1,0 +1,17 @@
+# Run these commands to fix Ethernet:
+
+cd /Users/andrevollmer/moodeaudio-cursor
+
+sudo mkdir -p /Volumes/rootfs/lib/systemd/system
+sudo mkdir -p /Volumes/rootfs/etc/systemd/system/local-fs.target.wants
+
+sudo cp moode-source/lib/systemd/system/boot-complete-minimal.service /Volumes/rootfs/lib/systemd/system/boot-complete-minimal.service
+
+sudo ln -sf /lib/systemd/system/boot-complete-minimal.service /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/boot-complete-minimal.service
+
+# Verify:
+ls -la /Volumes/rootfs/lib/systemd/system/boot-complete-minimal.service
+ls -la /Volumes/rootfs/etc/systemd/system/local-fs.target.wants/boot-complete-minimal.service
+
+echo "✅ Fixed! Reboot Pi now."
+

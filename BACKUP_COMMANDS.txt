@@ -1,0 +1,17 @@
+# Run this to backup working moOde Audio:
+
+cd /Users/andrevollmer/moodeaudio-cursor
+
+# Full backup (recommended):
+sudo ./BACKUP_WORKING_MOODE.sh
+
+# Or manual backup:
+sudo mkdir -p moode-working-backup
+sudo rsync -av /Volumes/rootfs/etc moode-working-backup/
+sudo rsync -av /Volumes/rootfs/var/www/html moode-working-backup/
+sudo rsync -av /Volumes/rootfs/var/local/www moode-working-backup/
+sudo rsync -av /Volumes/rootfs/lib/systemd/system moode-working-backup/
+sudo rsync -av /Volumes/bootfs moode-working-backup/bootfs-backup
+
+echo "✅ Backup complete!"
+

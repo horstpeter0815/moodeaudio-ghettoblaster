@@ -1,0 +1,21 @@
+# Copy and paste these commands one by one (or all at once):
+
+sudo mkdir -p /Volumes/rootfs/var/www/html/test-wizard
+sudo mkdir -p /Volumes/rootfs/var/www/html/command
+sudo mkdir -p /Volumes/rootfs/var/www/html/templates
+sudo mkdir -p /Volumes/rootfs/usr/local/bin
+
+sudo cp test-wizard/wizard-functions.js /Volumes/rootfs/var/www/html/test-wizard/wizard-functions.js
+sudo chmod 644 /Volumes/rootfs/var/www/html/test-wizard/wizard-functions.js
+
+sudo cp moode-source/www/command/room-correction-wizard.php /Volumes/rootfs/var/www/html/command/room-correction-wizard.php
+sudo chmod 644 /Volumes/rootfs/var/www/html/command/room-correction-wizard.php
+
+# Python scripts (optional - copy if they exist)
+sudo cp moode-source/usr/local/bin/generate-camilladsp-eq.py /Volumes/rootfs/usr/local/bin/generate-camilladsp-eq.py 2>/dev/null || echo "generate-camilladsp-eq.py not found"
+sudo chmod 755 /Volumes/rootfs/usr/local/bin/generate-camilladsp-eq.py 2>/dev/null || true
+
+sudo cp moode-source/usr/local/bin/analyze-measurement.py /Volumes/rootfs/usr/local/bin/analyze-measurement.py 2>/dev/null || echo "analyze-measurement.py not found"
+sudo chmod 755 /Volumes/rootfs/usr/local/bin/analyze-measurement.py 2>/dev/null || true
+
+echo "✅ Deployment complete!"

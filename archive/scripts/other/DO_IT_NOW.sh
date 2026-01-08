@@ -1,0 +1,3 @@
+#!/bin/bash
+# EIN BEFEHL - ALLES
+read -sp "SSH Passwort: " P && export SSHPASS=$P && echo "" && sshpass -e scp -o StrictHostKeyChecking=no FINAL_OPTIMIZED_INSTALL.sh verify_installation.sh andre@192.168.178.62:~/ && sshpass -e ssh -o StrictHostKeyChecking=no andre@192.168.178.62 "chmod +x ~/*.sh && echo '$SSHPASS' | sudo -S bash ~/FINAL_OPTIMIZED_INSTALL.sh" && sshpass -e scp -o StrictHostKeyChecking=no FINAL_OPTIMIZED_INSTALL.sh verify_installation.sh andre@192.168.178.134:~/ && sshpass -e ssh -o StrictHostKeyChecking=no andre@192.168.178.134 "chmod +x ~/*.sh && echo '$SSHPASS' | sudo -S bash ~/FINAL_OPTIMIZED_INSTALL.sh" && echo "✅ FERTIG - Reboot: sshpass -e ssh andre@192.168.178.62 'sudo reboot' && sshpass -e ssh andre@192.168.178.134 'sudo reboot'"

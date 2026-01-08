@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Execute Deployment</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Deployment via Browser</h1>
+    <p>Open browser console (F12) and paste this JavaScript code:</p>
+    <pre id="code"></pre>
+    <button onclick="copyCode()">Copy Code</button>
+    <button onclick="executeDeploy()">Execute Deployment</button>
+    <div id="results"></div>
+
+    <script>
+    const deployCode = `
+// Deployment via Browser Console
+fetch('/mock-backend.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'cmd=deploy_files'
+})
+.then(r => r.json())
+.then(data => {
+    console.log('Deployment results:', data);
+    if (data.status === 'ok') {
+        alert('Deployment successful!\\n\\n' + data.results.join('\\n'));
+        window.location.href = '/';
+    } else {
+        alert('Deployment failed: ' + (data.message || 'Unknown error'));
+    }
+})
+.catch(err => {
+    console.error('Error:', err);
+    alert('Deployment failed. Please use manual method.');
+});
+`;
+
+    document.getElementById('code').textContent = deployCode;
+
+    function copyCode() {
+        navigator.clipboard.writeText(deployCode).then(() => {
+            alert('Code copied to clipboard!');
+        });
+    }
+
+    function executeDeploy() {
+        fetch('/mock-backend.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'cmd=deploy_files'
+        })
+        .then(r => r.json())
+        .then(data => {
+            const resultsDiv = document.getElementById('results');
+            if (data.status === 'ok') {
+                resultsDiv.innerHTML = '<h2>✓ Deployment Successful!</h2><pre>' + 
+                    data.results.join('\\n') + '</pre>' +
+                    '<p><a href="/">Access Player</a> | <a href="/test-wizard/index-simple.html">Access Wizard</a></p>';
+            } else {
+                resultsDiv.innerHTML = '<h2>✗ Deployment Failed</h2><p>' + (data.message || 'Unknown error') + '</p>';
+            }
+        })
+        .catch(err => {
+            document.getElementById('results').innerHTML = '<h2>✗ Error</h2><p>' + err.message + '</p>';
+        });
+    }
+    </script>
+</body>
+</html>
+

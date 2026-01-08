@@ -1,0 +1,8 @@
+# Install improved Ethernet service - Run these commands:
+
+cd /Users/andrevollmer/moodeaudio-cursor
+
+sudo cp IMPROVED_ETH0_SERVICE.service /Volumes/rootfs/lib/systemd/system/eth0-direct-static.service
+
+echo "✅ Improved service installed - has retries and verification"
+

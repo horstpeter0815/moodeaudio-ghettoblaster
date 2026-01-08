@@ -1,0 +1,14 @@
+moOde Audio Working Backup
+Date: Fr.  2 Jan. 2026 08:02:26 CET
+Source: SD Card
+Rootfs: /Volumes/rootfs
+Bootfs: /Volumes/bootfs
+Backup Location: /Users/andrevollmer/moodeaudio-cursor/moode-working-backup
+
+Status: WORKING - Touch, Sound, Everything works!
+Network: May need reconfiguration
+
+To restore:
+1. Mount SD card
+2. Copy files back from /Users/andrevollmer/moodeaudio-cursor/moode-working-backup
+3. Reboot Pi

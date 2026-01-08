@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Smart AI Manager Cockpit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .cockpit-center {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            margin: 40px 0;
+        }
+        
+        .center-node {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 10;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+        }
+        
+        .center-node h2 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .center-node .status {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .branch {
+            position: absolute;
+            width: 300px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .branch.active {
+            background: rgba(76, 175, 80, 0.3);
+            border-color: rgba(76, 175, 80, 0.5);
+            animation: glow 2s infinite;
+        }
+        
+        .branch.inactive {
+            background: rgba(158, 158, 158, 0.2);
+            border-color: rgba(158, 158, 158, 0.3);
+            opacity: 0.6;
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 8px 32px rgba(76, 175, 80, 0.3); }
+            50% { box-shadow: 0 8px 32px rgba(76, 175, 80, 0.6); }
+        }
+        
+        .branch h3 {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .branch .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            display: inline-block;
+        }
+        
+        .status-indicator.active {
+            background: #4caf50;
+            box-shadow: 0 0 10px #4caf50;
+        }
+        
+        .status-indicator.inactive {
+            background: #9e9e9e;
+        }
+        
+        .branch-top { top: 10%; left: 50%; transform: translateX(-50%); }
+        .branch-right { top: 50%; right: 5%; transform: translateY(-50%); }
+        .branch-bottom { bottom: 10%; left: 50%; transform: translateX(-50%); }
+        .branch-left { top: 50%; left: 5%; transform: translateY(-50%); }
+        .branch-top-left { top: 15%; left: 15%; }
+        .branch-top-right { top: 15%; right: 15%; }
+        .branch-bottom-left { bottom: 15%; left: 15%; }
+        .branch-bottom-right { bottom: 15%; right: 15%; }
+        
+        .connection-line {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            height: 2px;
+            z-index: 1;
+        }
+        
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stat-card h3 {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .log-panel {
+            margin-top: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        .departments-panel {
+            margin-top: 40px;
+        }
+        
+        .departments-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .department-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .department-card.active {
+            background: rgba(76, 175, 80, 0.3);
+            border-color: rgba(76, 175, 80, 0.5);
+        }
+        
+        .department-card h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .department-card .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        
+        .status-badge.active {
+            background: rgba(76, 175, 80, 0.5);
+        }
+        
+        .status-badge.inactive {
+            background: rgba(158, 158, 158, 0.3);
+        }
+        
+        .status-badge.available {
+            background: rgba(33, 150, 243, 0.3);
+        }
+        
+        .department-card .systems-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0 0;
+        }
+        
+        .department-card .systems-list li {
+            padding: 5px 0;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .department-card .systems-list li:before {
+            content: "→ ";
+            margin-right: 5px;
+        }
+        
+        .resource-panel {
+            margin-top: 40px;
+        }
+        
+        .resource-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .resource-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .resource-card h3 {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+        
+        .process-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .process-item:last-child {
+            border-bottom: none;
+        }
+        
+        .process-name {
+            flex: 1;
+            font-size: 0.9em;
+        }
+        
+        .process-resource {
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .process-resource.high {
+            color: #ff5252;
+        }
+        
+        .process-resource.medium {
+            color: #ffa726;
+        }
+        
+        .process-resource.low {
+            color: #66bb6a;
+        }
+        
+        .scheduling-panel {
+            background: rgba(33, 150, 243, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(33, 150, 243, 0.3);
+            margin-top: 20px;
+        }
+        
+        .scheduling-panel h3 {
+            margin-bottom: 15px;
+        }
+        
+        .suggestion-item {
+            padding: 10px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        .suggestion-item.warning {
+            border-left-color: #ff5252;
+        }
+        
+        .suggestion-item.info {
+            border-left-color: #2196f3;
+        }
+        
+        .suggestion-message {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .suggestion-action {
+            font-size: 0.9em;
+            opacity: 0.8;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Smart AI Manager Cockpit</h1>
+            <p>System-Übersicht und Aktivitäts-Monitor</p>
+        </div>
+        
+        <div class="cockpit-center">
+            <!-- Zentrum: Smart AI Manager -->
+            <div class="center-node">
+                <h2>🤖 Smart AI</h2>
+                <div class="status" id="ai-status">Manager</div>
+                <div class="status" id="ai-activity">Aktiv</div>
+            </div>
+            
+            <!-- Branches -->
+            <div class="branch branch-top active" id="branch-build">
+                <h3><span class="status-indicator active"></span>Build System</h3>
+                <div id="build-status">Bereit</div>
+            </div>
+            
+            <div class="branch branch-top-right active" id="branch-pi">
+                <h3><span class="status-indicator active"></span>Pi System</h3>
+                <div id="pi-status">Prüfe...</div>
+            </div>
+            
+            <div class="branch branch-right active" id="branch-storage">
+                <h3><span class="status-indicator active"></span>Storage</h3>
+                <div id="storage-status">Monitoring</div>
+            </div>
+            
+            <div class="branch branch-bottom-right active" id="branch-test">
+                <h3><span class="status-indicator active"></span>Test System</h3>
+                <div id="test-status">Bereit</div>
+            </div>
+            
+            <div class="branch branch-bottom active" id="branch-debugger">
+                <h3><span class="status-indicator active"></span>Debugger</h3>
+                <div id="debugger-status">Bereit</div>
+            </div>
+            
+            <div class="branch branch-bottom-left active" id="branch-docs">
+                <h3><span class="status-indicator active"></span>Documentation</h3>
+                <div id="docs-status">Aktualisiert</div>
+            </div>
+            
+            <div class="branch branch-left active" id="branch-autonomous">
+                <h3><span class="status-indicator active"></span>Autonomous</h3>
+                <div id="autonomous-status">Läuft</div>
+            </div>
+            
+            <div class="branch branch-top-left active" id="branch-cleanup">
+                <h3><span class="status-indicator active"></span>Cleanup</h3>
+                <div id="cleanup-status">Bereit</div>
+            </div>
+        </div>
+        
+        <!-- Abteilungen/Systeme Panel -->
+        <div class="departments-panel">
+            <h2 style="text-align: center; margin: 30px 0 20px 0;">🏢 Abteilungen & Systeme</h2>
+            <div class="departments-grid" id="departments-grid">
+                <!-- Wird dynamisch gefüllt -->
+            </div>
+        </div>
+        
+        <div class="stats-panel">
+            <div class="stat-card">
+                <h3>💾 RAM</h3>
+                <div class="value" id="ram-percent">0%</div>
+                <div id="ram-details">0 GB / 0 GB</div>
+                <div id="ram-available" style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">Verfügbar: 0 GB</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>💿 SSD/Speicher</h3>
+                <div class="value" id="storage-percent">0%</div>
+                <div id="storage-details">0 GB / 0 GB</div>
+                <div id="storage-available" style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">Verfügbar: 0 GB</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>⚙️ CPU</h3>
+                <div class="value" id="cpu-percent">0%</div>
+                <div id="cpu-cores">Cores: 0</div>
+                <div id="cpu-per-core" style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">-</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>🖥️ Pi Status</h3>
+                <div class="value" id="pi-status-value">Offline</div>
+                <div id="pi-ip">-</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>🔄 Aktive Prozesse</h3>
+                <div class="value" id="process-count">0</div>
+                <div id="process-list">-</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>⏰ Letzte Aktualisierung</h3>
+                <div class="value" id="last-update">-</div>
+            </div>
+        </div>
+        
+        <!-- Ressourcen-Nutzung Panel -->
+        <div class="resource-panel">
+            <h2 style="text-align: center; margin: 30px 0 20px 0;">⚡ Ressourcen-Nutzung</h2>
+            
+            <div class="resource-summary">
+                <div class="resource-card">
+                    <h3>🔴 Top CPU-Verbraucher</h3>
+                    <div id="top-cpu-processes">-</div>
+                </div>
+                
+                <div class="resource-card">
+                    <h3>💾 Top Memory-Verbraucher</h3>
+                    <div id="top-memory-processes">-</div>
+                </div>
+                
+                <div class="resource-card">
+                    <h3>📊 Nach Kategorie</h3>
+                    <div id="resource-by-category">-</div>
+                </div>
+            </div>
+            
+            <div class="scheduling-panel">
+                <h3>💡 Intelligente Vorschläge</h3>
+                <div id="scheduling-suggestions">-</div>
+            </div>
+        </div>
+        
+        <div class="log-panel">
+            <h3>📋 Aktuelle Logs</h3>
+            <div id="log-entries"></div>
+        </div>
+    </div>
+    
+    <div class="refresh-indicator">
+        <span id="refresh-time">Aktualisiere...</span>
+    </div>
+    
+    <script>
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Pi Status
+                    const piStatus = data.pi.status === 'online' ? 'Online' : 'Offline';
+                    document.getElementById('pi-status-value').textContent = piStatus;
+                    document.getElementById('pi-ip').textContent = data.pi.ip || '-';
+                    document.getElementById('pi-status').textContent = piStatus;
+                    
+                    // RAM
+                    document.getElementById('ram-percent').textContent = data.ram.percent + '%';
+                    document.getElementById('ram-details').textContent = 
+                        data.ram.used_gb + ' GB / ' + data.ram.total_gb + ' GB';
+                    document.getElementById('ram-available').textContent = 
+                        'Verfügbar: ' + data.ram.available_gb + ' GB';
+                    
+                    // Storage
+                    document.getElementById('storage-percent').textContent = data.storage.percent + '%';
+                    document.getElementById('storage-details').textContent = 
+                        data.storage.used_gb + ' GB / ' + data.storage.total_gb + ' GB';
+                    document.getElementById('storage-available').textContent = 
+                        'Verfügbar: ' + data.storage.available_gb + ' GB';
+                    document.getElementById('storage-status').textContent = 
+                        data.storage.percent + '% belegt';
+                    
+                    // CPU
+                    document.getElementById('cpu-percent').textContent = data.cpu.total_percent + '%';
+                    document.getElementById('cpu-cores').textContent = 
+                        data.cpu.cores + ' Cores / ' + data.cpu.threads + ' Threads';
+                    if (data.cpu.per_core && data.cpu.per_core.length > 0) {
+                        const perCoreText = data.cpu.per_core.map((p, i) => 
+                            'Core ' + (i+1) + ': ' + p + '%'
+                        ).join(' | ');
+                        document.getElementById('cpu-per-core').textContent = perCoreText;
+                    }
+                    
+                    // Prozesse
+                    const processCount = data.processes.length;
+                    document.getElementById('process-count').textContent = processCount;
+                    const processNames = data.processes.map(p => p.name).join(', ') || '-';
+                    document.getElementById('process-list').textContent = processNames;
+                    
+                    // Ressourcen-Nutzung
+                    if (data.resource_usage) {
+                        // Top CPU-Verbraucher
+                        const topCpu = data.processes.slice(0, 5).map(p => {
+                            const cpuClass = p.cpu_percent > 10 ? 'high' : p.cpu_percent > 5 ? 'medium' : 'low';
+                            return `<div class="process-item">
+                                <span class="process-name">${p.name}</span>
+                                <span class="process-resource ${cpuClass}">${p.cpu_percent}% CPU</span>
+                            </div>`;
+                        }).join('');
+                        document.getElementById('top-cpu-processes').innerHTML = topCpu || '<div style="opacity: 0.5;">Keine aktiven Prozesse</div>';
+                        
+                        // Top Memory-Verbraucher
+                        const topMemory = [...data.processes].sort((a, b) => (b.memory_mb || 0) - (a.memory_mb || 0)).slice(0, 5).map(p => {
+                            const memClass = p.memory_mb > 500 ? 'high' : p.memory_mb > 100 ? 'medium' : 'low';
+                            return `<div class="process-item">
+                                <span class="process-name">${p.name}</span>
+                                <span class="process-resource ${memClass}">${p.memory_mb} MB</span>
+                            </div>`;
+                        }).join('');
+                        document.getElementById('top-memory-processes').innerHTML = topMemory || '<div style="opacity: 0.5;">Keine aktiven Prozesse</div>';
+                        
+                        // Nach Kategorie
+                        if (data.resource_usage.by_category) {
+                            const byCategory = Object.entries(data.resource_usage.by_category).map(([cat, info]) => {
+                                return `<div class="process-item">
+                                    <span class="process-name">${cat}</span>
+                                    <span class="process-resource">${info.cpu.toFixed(1)}% CPU, ${info.memory_mb.toFixed(1)} MB</span>
+                                </div>`;
+                            }).join('');
+                            document.getElementById('resource-by-category').innerHTML = byCategory || '<div style="opacity: 0.5;">Keine Daten</div>';
+                        }
+                    }
+                    
+                    // Scheduling-Vorschläge
+                    if (data.scheduling_suggestions && data.scheduling_suggestions.length > 0) {
+                        const suggestions = data.scheduling_suggestions.map(s => {
+                            return `<div class="suggestion-item ${s.type}">
+                                <div class="suggestion-message">${s.message}</div>
+                                <div class="suggestion-action">→ ${s.action}</div>
+                            </div>`;
+                        }).join('');
+                        document.getElementById('scheduling-suggestions').innerHTML = suggestions;
+                    } else {
+                        document.getElementById('scheduling-suggestions').innerHTML = '<div style="opacity: 0.5;">Keine Vorschläge - System läuft optimal</div>';
+                    }
+                    
+                    // Branch Status
+                    data.processes.forEach(proc => {
+                        const branch = document.getElementById('branch-' + proc.type);
+                        if (branch) {
+                            branch.classList.add('active');
+                            branch.classList.remove('inactive');
+                        }
+                    });
+                    
+                    // Abteilungen
+                    const departmentsGrid = document.getElementById('departments-grid');
+                    if (data.departments) {
+                        departmentsGrid.innerHTML = Object.values(data.departments).map(dept => {
+                            const statusClass = dept.status === 'active' ? 'active' : 
+                                               dept.status === 'available' ? 'available' : 'inactive';
+                            const statusText = dept.status === 'active' ? 'Aktiv' : 
+                                             dept.status === 'available' ? 'Verfügbar' : 'Inaktiv';
+                            return `
+                                <div class="department-card ${statusClass}">
+                                    <h3>
+                                        ${dept.name}
+                                        <span class="status-badge ${statusClass}">${statusText}</span>
+                                    </h3>
+                                    <ul class="systems-list">
+                                        ${dept.systems.map(system => `<li>${system}</li>`).join('')}
+                                        ${dept.systems.length === 0 ? '<li style="opacity: 0.5;">Keine aktiven Systeme</li>' : ''}
+                                    </ul>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                    
+                    // Logs
+                    const logEntries = document.getElementById('log-entries');
+                    logEntries.innerHTML = data.logs.slice(-10).reverse().map(log => 
+                        `<div class="log-entry">${log.trim()}</div>`
+                    ).join('');
+                    
+                    // Update Time
+                    const now = new Date();
+                    document.getElementById('last-update').textContent = 
+                        now.toLocaleTimeString('de-DE');
+                    document.getElementById('refresh-time').textContent = 
+                        'Aktualisiert: ' + now.toLocaleTimeString('de-DE');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+        
+        // Initial Update
+        updateStatus();
+        
+        // Auto-Refresh alle 5 Sekunden
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+</html>
+

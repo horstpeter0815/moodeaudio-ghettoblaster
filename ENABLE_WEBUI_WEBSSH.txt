@@ -1,0 +1,29 @@
+# Enable moOde Web UI via WebSSH
+
+# 1. Enable Apache/nginx (moOde web server)
+sudo systemctl enable apache2
+sudo systemctl start apache2
+
+# OR if moOde uses nginx:
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+# 2. Check which web server moOde uses
+systemctl status apache2
+systemctl status nginx
+
+# 3. Enable web UI in moOde database (if needed)
+sudo sqlite3 /var/local/www/db/moode-sqlite3.db "UPDATE cfg_system SET value='1' WHERE param='local_display';"
+
+# 4. Restart web server
+sudo systemctl restart apache2
+# OR
+sudo systemctl restart nginx
+
+# 5. Check if web UI is accessible
+curl http://localhost
+curl http://127.0.1.1
+
+
+
+

@@ -1,0 +1,7 @@
+# Copy and paste this ONE LINE into WebSSH:
+
+sqlite3 /var/local/www/db/moode-sqlite3.db "UPDATE cfg_system SET value='1' WHERE param='local_display';" && systemctl enable localdisplay.service && systemctl start localdisplay.service && systemctl status localdisplay.service
+
+
+
+

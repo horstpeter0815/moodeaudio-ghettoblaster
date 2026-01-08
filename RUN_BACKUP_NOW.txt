@@ -1,0 +1,6 @@
+# Copy and paste this:
+
+cd ~/moodeaudio-cursor && sudo ./BACKUP_FROM_HOME.sh
+
+# That's it! No ssh needed, just run the script.
+

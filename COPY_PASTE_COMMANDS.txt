@@ -1,0 +1,50 @@
+=== SSH VERBINDUNG TESTEN ===
+
+# Test SSH connection
+ssh andre@10.10.11.39
+
+# Wenn Passwort abgefragt wird, verschiedene Passwörter probieren:
+# - 0815
+# - moode
+# - raspberry
+# - pi
+# - (dein übliches Passwort)
+
+
+=== DATEIEN KOPIEREN (wenn SSH funktioniert) ===
+
+# 1. Verzeichnis erstellen
+ssh andre@10.10.11.39 "sudo mkdir -p /var/www/html/test-wizard"
+
+# 2. Dateien kopieren
+scp test-wizard/index-simple.html andre@10.10.11.39:/tmp/
+scp test-wizard/wizard-functions.js andre@10.10.11.39:/tmp/
+scp test-wizard/snd-config.html andre@10.10.11.39:/tmp/
+scp moode-source/www/command/room-correction-wizard.php andre@10.10.11.39:/tmp/
+
+# 3. Dateien verschieben (nach SSH-Login)
+ssh andre@10.10.11.39
+sudo mv /tmp/index-simple.html /var/www/html/
+sudo mv /tmp/wizard-functions.js /var/www/html/test-wizard/
+sudo mv /tmp/snd-config.html /var/www/html/test-wizard/
+sudo mv /tmp/room-correction-wizard.php /var/www/html/command/
+sudo chown -R www-data:www-data /var/www/html/index-simple.html /var/www/html/test-wizard /var/www/html/command/room-correction-wizard.php
+sudo chmod 644 /var/www/html/index-simple.html /var/www/html/test-wizard/* /var/www/html/command/room-correction-wizard.php
+exit
+
+
+=== PASSWORT ZURÜCKSETZEN (am Raspberry direkt) ===
+
+# Am Raspberry mit Tastatur/Monitor:
+sudo passwd andre
+# Neues Passwort eingeben (z.B. 0815)
+
+
+=== ALTERNATIVE: DATEIEN PRÜFEN ===
+
+# Prüfen ob Dateien existieren:
+ls -la test-wizard/index-simple.html
+ls -la test-wizard/wizard-functions.js
+ls -la test-wizard/snd-config.html
+ls -la moode-source/www/command/room-correction-wizard.php
+

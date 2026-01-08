@@ -1,0 +1,81 @@
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+ENV container=docker
+
+# Install ALL necessary packages for complete simulation
+RUN apt-get update && \
+    apt-get install -y \
+    systemd \
+    systemd-sysv \
+    dbus \
+    sudo \
+    openssh-server \
+    curl \
+    wget \
+    net-tools \
+    iputils-ping \
+    hostname \
+    python3 \
+    python3-pip \
+    bash \
+    xvfb \
+    x11vnc \
+    xdotool \
+    chromium \
+    chromium-driver \
+    alsa-utils \
+    i2c-tools \
+    xserver-xorg \
+    xserver-xorg-core \
+    xinit \
+    x11-xserver-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create groups
+RUN (groupadd -f spi 2>/dev/null || true) && \
+    (groupadd -f gpio 2>/dev/null || true) && \
+    (groupadd -f i2c 2>/dev/null || true) && \
+    (groupadd -f plugdev 2>/dev/null || true)
+
+# Create user 'andre' with UID 1000 (moOde requirement)
+RUN if ! id -u andre >/dev/null 2>&1; then \
+        groupadd -g 1000 andre 2>/dev/null || true; \
+        useradd -m -s /bin/bash -u 1000 -g 1000 andre; \
+    else \
+        usermod -u 1000 andre 2>/dev/null || true; \
+        groupmod -g 1000 andre 2>/dev/null || true; \
+    fi && \
+    echo "andre:0815" | chpasswd && \
+    usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre 2>/dev/null || \
+    usermod -aG audio,video,sudo andre
+
+# Add andre to sudoers
+RUN echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre && \
+    chmod 0440 /etc/sudoers.d/andre
+
+# Set hostname (will be set properly at runtime)
+RUN echo "GhettoBlaster" > /etc/hostname
+
+# Set up SSH
+RUN mkdir -p /var/run/sshd && \
+    ssh-keygen -A
+
+# Create directories for simulation
+RUN mkdir -p /var/log/sim /test /boot/firmware /var/www/daemon
+
+# Create mock boot files
+RUN echo "display_rotate=0" > /boot/firmware/config.txt.overwrite && \
+    echo "hdmi_force_mode=1" >> /boot/firmware/config.txt.overwrite && \
+    touch /boot/firmware/ssh
+
+# Create mock moOde files
+RUN echo "<?php // moOde worker.php" > /var/www/daemon/worker.php && \
+    echo "// Ghettoblaster: display_rotate=0" >> /var/www/daemon/worker.php
+
+# For systemd in Docker
+VOLUME /tmp /run /run/lock
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]
+

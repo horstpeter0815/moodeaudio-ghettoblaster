@@ -1,0 +1,49 @@
+FROM --platform=linux/amd64 ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    coreutils \
+    qemu-user-static \
+    binfmt-support \
+    parted \
+    kpartx \
+    debootstrap \
+    dosfstools \
+    rsync \
+    bc \
+    bison \
+    flex \
+    libssl-dev \
+    make \
+    gcc \
+    g++ \
+    build-essential \
+    python3 \
+    python3-pip \
+    curl \
+    wget \
+    sudo \
+    quilt \
+    zerofree \
+    zip \
+    libcap2-bin \
+    libarchive-tools \
+    xxd \
+    file \
+    kmod \
+    pigz \
+    arch-test \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ensure QEMU binfmt is properly registered for ARM emulation
+RUN update-binfmts --enable qemu-arm || true
+
+# Setup build environment
+WORKDIR /workspace
+
+# Entry point
+ENTRYPOINT ["/bin/bash"]

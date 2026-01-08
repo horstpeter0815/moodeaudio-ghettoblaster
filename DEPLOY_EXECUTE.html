@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Execute Deployment</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        pre { background: #fff; padding: 10px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>Executing Deployment...</h1>
+    <div id="result"></div>
+    
+    <script>
+        (async function() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // Try to execute deployment via room-correction-wizard.php
+                const formData = new FormData();
+                formData.append('cmd', 'deploy_files');
+                
+                const response = await fetch('/command/room-correction-wizard.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                let html = '<h2>Deployment Results:</h2><pre>';
+                
+                if (data.status === 'ok') {
+                    html += '✓ Deployment Complete!\n\n';
+                    if (data.results) {
+                        data.results.forEach(r => html += '✓ ' + r + '\n');
+                    }
+                    html += '</pre><p class="success">✓ All files deployed successfully!</p>';
+                    html += '<p><a href="/">Access Player</a> | <a href="/test-wizard/index-simple.html">Access Wizard</a></p>';
+                } else {
+                    html += '⚠ Deployment completed with errors\n\n';
+                    if (data.results) {
+                        data.results.forEach(r => html += '✓ ' + r + '\n');
+                    }
+                    if (data.errors) {
+                        data.errors.forEach(e => html += '✗ ' + e + '\n');
+                    }
+                    html += '</pre><p class="error">⚠ Some errors occurred. Check results above.</p>';
+                }
+                
+                resultDiv.innerHTML = html;
+                
+                // If deployment failed, try alternative method
+                if (data.status === 'error' && data.message && data.message.includes('Invalid command')) {
+                    resultDiv.innerHTML += '<p>Trying alternative deployment method...</p>';
+                    
+                    // Alternative: Direct file operations via PHP (if we can create a script)
+                    const altResponse = await fetch('/index-simple.html');
+                    if (altResponse.ok) {
+                        resultDiv.innerHTML += '<p>✓ index-simple.html is accessible</p>';
+                        resultDiv.innerHTML += '<p>Note: Some files may need to be deployed manually via SSH or file manager.</p>';
+                    }
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<p class="error">✗ Error: ' + error.message + '</p>';
+                resultDiv.innerHTML += '<p>Please check the browser console for details.</p>';
+                console.error('Deployment error:', error);
+            }
+        })();
+    </script>
+</body>
+</html>
+

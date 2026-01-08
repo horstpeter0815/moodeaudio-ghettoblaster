@@ -1,0 +1,9 @@
+# Run this command:
+
+cd /Users/andrevollmer/moodeaudio-cursor
+sudo cp IMPROVED_ETH0_SERVICE.service /Volumes/rootfs/lib/systemd/system/eth0-direct-static.service
+
+# Verify:
+ls -la /Volumes/rootfs/lib/systemd/system/eth0-direct-static.service
+
+echo "✅ Improved service installed - reboot Pi now!"

@@ -1,0 +1,15 @@
+[Unit]
+Description=First Boot Setup - Run once on first boot
+After=network.target local-fs.target
+Before=localdisplay.service auto-fix-display.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/first-boot-setup.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

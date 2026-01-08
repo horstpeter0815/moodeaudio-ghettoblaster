@@ -1,0 +1,19 @@
+FROM debian:bullseye-slim
+
+# Install tools to mount and check Raspberry Pi images
+RUN apt-get update && \
+    apt-get install -y \
+    qemu-utils \
+    kpartx \
+    dosfstools \
+    e2fsprogs \
+    fdisk \
+    util-linux \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy check script
+COPY check-image-contents.sh /check-image-contents.sh
+RUN chmod +x /check-image-contents.sh
+
+CMD ["/check-image-contents.sh"]
+

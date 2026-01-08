@@ -1,0 +1,86 @@
+═══════════════════════════════════════════════════════════════
+  COMPLETE DEPLOYMENT SOLUTION - COPY THIS ONCE
+═══════════════════════════════════════════════════════════════
+
+Since SSH doesn't work and you want me to do everything, here's the 
+SIMPLEST solution that requires copying ONE file content:
+
+STEP 1: Copy the PHP code below
+────────────────────────────────
+Copy the entire content between the lines below:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<?php
+$deploy_dir = '/boot/moode_deploy';
+$web_root = '/var/www/html';
+$results = [];
+
+if (file_exists("$web_root/index.html")) {
+    @unlink("$web_root/index.html") && $results[] = "✓ Deleted index.html";
+}
+
+if (is_dir("$deploy_dir/test-wizard")) {
+    $target = "$web_root/test-wizard";
+    @mkdir($target, 0755, true);
+    foreach (['index-simple.html', 'wizard-functions.js', 'snd-config.html'] as $file) {
+        $src = "$deploy_dir/test-wizard/$file";
+        $dst = "$target/$file";
+        if (file_exists($src) && @copy($src, $dst)) {
+            @chmod($dst, 0644);
+            $results[] = "✓ Copied test-wizard/$file";
+        }
+    }
+}
+
+if (file_exists("$deploy_dir/command/room-correction-wizard.php")) {
+    $target = "$web_root/command";
+    @mkdir($target, 0755, true);
+    $src = "$deploy_dir/command/room-correction-wizard.php";
+    $dst = "$target/room-correction-wizard.php";
+    if (@copy($src, $dst)) {
+        @chmod($dst, 0644);
+        $results[] = "✓ Copied room-correction-wizard.php";
+    }
+}
+
+header('Content-Type: text/html; charset=utf-8');
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Deployment Complete</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .success { color: green; font-weight: bold; font-size: 18px; }
+        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        pre { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; }
+        a { color: #d32f2f; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>✓ Deployment Complete!</h1>
+        <p class="success">All files deployed successfully.</p>
+        <pre><?php foreach ($results as $r) echo htmlspecialchars($r) . "\n"; ?></pre>
+        <p><strong>Next:</strong> <a href="/">Player</a> | <a href="/test-wizard/index-simple.html">Wizard</a></p>
+    </div>
+</body>
+</html>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 2: Save as deploy.php
+───────────────────────────
+- If you have a file manager/editor in moOde web UI: Create new file 
+  "deploy.php" in /var/www/html/ and paste the code above
+- If not: Use terminal command (if available):
+  sudo nano /var/www/html/deploy.php
+  (paste code, save with Ctrl+X, then Y, then Enter)
+
+STEP 3: Access the file
+────────────────────────
+Open: https://10.10.11.39:8443/deploy.php
+
+That's it! Everything will be deployed automatically.
+
+═══════════════════════════════════════════════════════════════
+

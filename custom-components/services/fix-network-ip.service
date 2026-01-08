@@ -1,0 +1,13 @@
+[Unit]
+Description=Fix Network IP (Ghettoblaster - avoid 142/143)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/fix-network-ip.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

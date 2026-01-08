@@ -1,0 +1,82 @@
+[Unit]
+Description=ETH0 ONLY - Disable WiFi, Force Ethernet
+DefaultDependencies=no
+After=local-fs.target
+Before=network-pre.target
+Before=NetworkManager.service
+Before=wpa_supplicant.service
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+# AGGRESSIVE: Disable WiFi, Force Ethernet Only
+ExecStart=/bin/bash -c '
+    echo "🔧 AGGRESSIVE ETH0 ONLY Configuration..."
+    
+    # Disable WiFi interfaces
+    ip link set wlan0 down 2>/dev/null || true
+    ifconfig wlan0 down 2>/dev/null || true
+    
+    # Stop WiFi services
+    systemctl stop wpa_supplicant 2>/dev/null || true
+    systemctl stop NetworkManager 2>/dev/null || true
+    
+    # Wait for eth0 (up to 20 seconds)
+    ETH0_FOUND=false
+    for i in {1..20}; do
+        if ip link show eth0 >/dev/null 2>&1; then
+            ETH0_FOUND=true
+            echo "✅ eth0 Interface found"
+            break
+        fi
+        sleep 1
+    done
+    
+    if [ "$ETH0_FOUND" = "true" ]; then
+        # Force eth0 UP first
+        ip link set eth0 up 2>/dev/null || true
+        
+        # Configure with multiple retries
+        for attempt in {1..5}; do
+            echo "Attempt $attempt: Configuring eth0..."
+            ifconfig eth0 192.168.10.2 netmask 255.255.255.0 up 2>/dev/null || true
+            sleep 2
+            
+            # Verify
+            ETH0_IP=$(ip addr show eth0 2>/dev/null | grep "inet " | awk "{print \$2}" | cut -d/ -f1)
+            if [ "$ETH0_IP" = "192.168.10.2" ]; then
+                echo "✅✅✅ eth0 SUCCESS: $ETH0_IP ✅✅✅"
+                break
+            else
+                echo "⚠️  Attempt $attempt failed (got: $ETH0_IP)"
+            fi
+        done
+        
+        # Set route
+        route del default 2>/dev/null || true
+        route add default gw 192.168.10.1 eth0 2>/dev/null || true
+        
+        # Set DNS
+        echo "nameserver 192.168.10.1" > /etc/resolv.conf 2>/dev/null || true
+        echo "nameserver 8.8.8.8" >> /etc/resolv.conf 2>/dev/null || true
+        
+        # Final check
+        ETH0_IP=$(ip addr show eth0 2>/dev/null | grep "inet " | awk "{print \$2}" | cut -d/ -f1)
+        if [ "$ETH0_IP" = "192.168.10.2" ]; then
+            echo "✅✅✅ ETH0 CONFIGURED: $ETH0_IP ✅✅✅"
+        else
+            echo "❌ ERROR: eth0 IP is $ETH0_IP"
+        fi
+    fi
+'
+
+# Continuous watchdog
+ExecStartPost=/bin/bash -c 'for i in {1..30}; do sleep 10; ETH0_IP=$(ip addr show eth0 2>/dev/null | grep "inet " | awk "{print \$2}" | cut -d/ -f1); if [ "$ETH0_IP" != "192.168.10.2" ]; then echo "Fixing eth0..."; ifconfig eth0 192.168.10.2 netmask 255.255.255.0 up 2>/dev/null || true; route add default gw 192.168.10.1 eth0 2>/dev/null || true; fi; done &'
+
+[Install]
+WantedBy=local-fs.target
+WantedBy=sysinit.target
+

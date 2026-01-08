@@ -1,0 +1,19 @@
+# Befehle zum Kopieren in WebSSH Terminal
+
+# 1. SSH dauerhaft aktivieren
+sudo systemctl enable ssh
+sudo systemctl start ssh
+sudo touch /boot/firmware/ssh
+
+# 2. Config-Datei erstellen (kopiere den Inhalt von MOODE_PI5_WAVESHARE_HDMI_CONFIG.txt)
+sudo nano /boot/firmware/config.txt
+# Oder direkt:
+sudo cp /boot/firmware/config.txt /boot/firmware/config.txt.backup
+sudo mount -o remount,rw /boot/firmware
+
+# 3. Config-Inhalt einfügen (siehe nächste Datei)
+
+# 4. Sync und Reboot
+sync
+sudo reboot
+

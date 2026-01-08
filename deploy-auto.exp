@@ -1,0 +1,66 @@
+#!/usr/bin/expect -f
+set timeout 300
+set PI_HOST "192.168.178.161"
+set PI_USER "pi"
+set PI_PASS "andre0815"
+set IMAGE_FILE "2025-12-07-moode-r1001-arm64-lite.img"
+
+puts "🚀 Starte automatisches Deployment..."
+
+# Image kopieren
+spawn scp $IMAGE_FILE $PI_USER@$PI_HOST:/tmp/
+expect {
+    "password:" {
+        send "$PI_PASS\r"
+        exp_continue
+    }
+    "yes/no" {
+        send "yes\r"
+        exp_continue
+    }
+    eof
+}
+
+# Auf Pi einloggen und SD-Karte finden
+spawn ssh $PI_USER@$PI_HOST
+expect {
+    "password:" {
+        send "$PI_PASS\r"
+    }
+    "yes/no" {
+        send "yes\r"
+        exp_continue
+    }
+}
+
+expect "$ "
+send "lsblk -d -o NAME,SIZE,TYPE | grep -E 'sd\[a-z\]|mmcblk\[0-9\]' | grep -v boot | head -1 | awk '{print \\\$1}'\r"
+expect "$ "
+set SD_DEVICE $expect_out(buffer)
+set SD_DEVICE [string trim $SD_DEVICE]
+
+send "echo SD-Karte: /dev/$SD_DEVICE\r"
+expect "$ "
+
+send "sudo umount /dev/${SD_DEVICE}* 2>/dev/null || true\r"
+expect {
+    "password:" {
+        send "$PI_PASS\r"
+    }
+}
+
+send "sudo dd if=/tmp/$IMAGE_FILE of=/dev/$SD_DEVICE bs=4M status=progress\r"
+expect {
+    "password:" {
+        send "$PI_PASS\r"
+    }
+}
+expect "$ "
+
+send "sync\r"
+expect "$ "
+send "exit\r"
+expect eof
+
+puts "\n✅ Deployment abgeschlossen!"
+

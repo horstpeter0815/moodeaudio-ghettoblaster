@@ -1,0 +1,32 @@
+# Config für Pi mit IP 192.168.1.226
+
+## WebSSH: http://192.168.1.226:4200
+## Login: andre / 0815
+
+## Befehle zum Ausführen im WebSSH Terminal:
+
+# 1. Backup erstellen
+sudo cp /boot/firmware/config.txt /boot/firmware/config.txt.backup
+
+# 2. Boot-Partition beschreibbar machen
+sudo mount -o remount,rw /boot/firmware
+
+# 3. Config anwenden (kopiere Inhalt von MOODE_PI5_WAVESHARE_HDMI_CONFIG.txt)
+sudo nano /boot/firmware/config.txt
+
+# ODER: Direkt mit tee (kopiere den Inhalt von APPLY_CONFIG_NOW.sh)
+
+# 4. SSH aktivieren
+sudo touch /boot/firmware/ssh
+sudo systemctl enable ssh
+sudo systemctl start ssh
+
+# 5. Sync und Reboot
+sync
+sudo reboot
+
+## Nach Reboot:
+# - SSH sollte funktionieren: ssh andre@192.168.1.226
+# - Config sollte angewendet sein
+# - Waveshare Display sollte konfiguriert sein
+

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auto-Deploy Files</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        button { padding: 15px 30px; background: #d32f2f; color: white; border: none; cursor: pointer; font-size: 18px; border-radius: 4px; }
+        button:hover { background: #b71c1c; }
+        pre { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>moOde Auto-Deployment</h1>
+        <p>This page will automatically deploy all files from <code>/boot/moode_deploy/</code> to <code>/var/www/html/</code></p>
+        <button onclick="deployFiles()">Deploy All Files Now</button>
+        <div id="results" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+    async function deployFiles() {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '<p>Deploying files...</p>';
+        
+        // Create deployment PHP script content
+        const deployScript = `<?php
+$deploy_dir = '/boot/moode_deploy';
+$web_root = '/var/www/html';
+$results = [];
+
+// 1. Delete index.html
+if (file_exists("$web_root/index.html")) {
+    @unlink("$web_root/index.html") && $results[] = "✓ Deleted index.html";
+}
+
+// 2. Copy test-wizard files
+if (is_dir("$deploy_dir/test-wizard")) {
+    $target = "$web_root/test-wizard";
+    @mkdir($target, 0755, true);
+    foreach (['index-simple.html', 'wizard-functions.js', 'snd-config.html'] as $file) {
+        $src = "$deploy_dir/test-wizard/$file";
+        $dst = "$target/$file";
+        if (file_exists($src) && @copy($src, $dst)) {
+            @chmod($dst, 0644);
+            $results[] = "✓ Copied test-wizard/$file";
+        }
+    }
+}
+
+// 3. Copy room-correction-wizard.php
+if (file_exists("$deploy_dir/command/room-correction-wizard.php")) {
+    $target = "$web_root/command";
+    @mkdir($target, 0755, true);
+    $src = "$deploy_dir/command/room-correction-wizard.php";
+    $dst = "$target/room-correction-wizard.php";
+    if (@copy($src, $dst)) {
+        @chmod($dst, 0644);
+        $results[] = "✓ Copied room-correction-wizard.php";
+    }
+}
+
+header('Content-Type: application/json');
+echo json_encode(['status' => 'ok', 'results' => $results]);
+?>`;
+
+        try {
+            // Try to create deploy.php file via fetch
+            const formData = new FormData();
+            formData.append('file', new Blob([deployScript], { type: 'application/x-php' }), 'deploy.php');
+            
+            // First, try to execute deployment directly via a PHP endpoint
+            const response = await fetch('/command/room-correction-wizard.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'cmd=deploy_files'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'ok') {
+                    resultsDiv.innerHTML = '<p class="success">✓ Deployment Complete!</p><pre>' + 
+                        (data.results ? data.results.join('\\n') : 'All files deployed') + 
+                        '</pre><p><a href="/">Access Player</a> | <a href="/test-wizard/index-simple.html">Access Wizard</a></p>';
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+        
+        // Fallback: Show instructions
+        resultsDiv.innerHTML = `
+            <p class="error">Automatic deployment failed. Please use manual method:</p>
+            <p><strong>Option 1:</strong> Copy this PHP code to a file named <code>deploy.php</code> in <code>/var/www/html/</code>:</p>
+            <pre>${deployScript.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+            <p><strong>Option 2:</strong> Use terminal command:</p>
+            <pre>sudo cp /boot/moode_deploy/deploy-now.php /var/www/html/ && sudo chmod 644 /var/www/html/deploy-now.php</pre>
+            <p>Then access: <a href="/deploy-now.php">https://10.10.11.39:8443/deploy-now.php</a></p>
+        `;
+    }
+    </script>
+</body>
+</html>
+

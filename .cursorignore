@@ -1,0 +1,63 @@
+# Cursor Ignore Patterns
+# Files and directories to ignore during indexing
+
+# Build outputs
+*.img
+*.zip
+*.info
+deploy/
+build-outputs/
+pi-gen-64/
+work/
+export/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+*.tmp
+
+# Temporary files
+*.bak
+*.swp
+*~
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE (but keep .vscode for workspace settings)
+# .vscode/ - Keep this for workspace settings
+.idea/
+*.sublime-*
+
+# Archives
+archive/
+temp/
+temp-archive-*/
+
+# Large binary files
+*.tar.gz
+*.tar.bz2
+
+# Sensitive data
+secrets/
+*.key
+*.pem
+*.crt
+.env
+.env.local
+*.token
+config.local.sh
+
+# Keep important directories
+!moode-source/
+!scripts/
+!docs/
+!config/
+
+# Keep imgbuild/.git (submodule)
+!imgbuild/.git

@@ -1,0 +1,11 @@
+#########################################
+# This file is managed by moOde
+#########################################
+
+[pi5]
+display_rotate=0
+dtoverlay=vc4-kms-v3d-pi5,noaudio
+
+[all]
+hdmi_group=2
+hdmi_mode=87

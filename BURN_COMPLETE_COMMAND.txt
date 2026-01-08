@@ -1,0 +1,2 @@
+cd "/Users/andrevollmer/Library/Mobile Documents/com~apple~CloudDocs/Ablage/Roon filters/Bose Wave/OS/RPi4/moodeaudio/cursor" && diskutil unmountDisk /dev/disk4 && sudo dd if="/Users/andrevollmer/Library/Mobile Documents/com~apple~CloudDocs/Ablage/Roon filters/Bose Wave/OS/RPi4/moodeaudio/cursor/2025-12-07-moode-r1001-arm64-lite.img" of=/dev/rdisk4 bs=4m status=progress && sync
+
