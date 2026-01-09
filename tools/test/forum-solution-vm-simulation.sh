@@ -153,7 +153,7 @@ fi
 # Launch Chromium
 exec chromium-browser --kiosk --window-size=1280,400 http://localhost
 XINITRC_EOF
-chmod +x /home/andre/.xinitrc
+RUN chmod +x /home/andre/.xinitrc
 
 # Set up systemd
 RUN systemctl set-default multi-user.target

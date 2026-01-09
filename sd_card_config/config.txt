@@ -3,11 +3,20 @@ dtoverlay=vc4-kms-v3d-pi5,noaudio
 hdmi_enable_4kp60=0
 
 [all]
-dtoverlay=vc4-kms-v3d
+# Waveshare 7.9" reports portrait 400x1280; we rotate in X11/startup for 1280x400 landscape
+max_framebuffers=2
+display_auto_detect=1
+disable_fw_kms_setup=1
+arm_64bit=1
+
+disable_overscan=1
 hdmi_group=2
 hdmi_mode=87
-hdmi_cvt=1280 400 60 6 0 0 0
+hdmi_cvt=400 1280 60 6 0 0 0
+hdmi_force_mode=1
 hdmi_force_hotplug=1
 hdmi_drive=2
-display_rotate=0
+
+# Audio off on SoC; use AMP100 overlay in config.txt on target system if needed
+dtparam=audio=off
 

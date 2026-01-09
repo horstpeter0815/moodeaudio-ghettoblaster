@@ -128,6 +128,16 @@ fix_ssh() {
     fi
 }
 
+fix_ssh_hostkey() {
+    log "Fixing SSH host key mismatch (after reflashing SD / new image)..."
+    if [ -f "$SCRIPT_DIR/fix/fix-ssh-hostkey.sh" ]; then
+        bash "$SCRIPT_DIR/fix/fix-ssh-hostkey.sh" "${2:-192.168.10.2}" "${3:-andre}"
+    else
+        error "Script not found: $SCRIPT_DIR/fix/fix-ssh-hostkey.sh"
+        exit 1
+    fi
+}
+
 fix_amp100() {
     log "Fixing AMP100 hardware..."
     
@@ -189,6 +199,26 @@ fix_sd_macos_preflight() {
     fi
 }
 
+fix_display_sd_macos() {
+    log "macOS: Apply Waveshare display configuration to mounted SD (bootfs/rootfs)..."
+    if [ -f "$SCRIPT_DIR/fix/apply-display-to-sd-macos.sh" ]; then
+        sudo bash "$SCRIPT_DIR/fix/apply-display-to-sd-macos.sh" "${@:2}"
+    else
+        error "Script not found: $SCRIPT_DIR/fix/apply-display-to-sd-macos.sh"
+        exit 1
+    fi
+}
+
+fix_network_sd_macos() {
+    log "macOS: Apply deterministic Ethernet (192.168.10.2) + SSH + boot-report to mounted SD..."
+    if [ -f "$SCRIPT_DIR/fix/apply-network-to-sd-macos.sh" ]; then
+        sudo bash "$SCRIPT_DIR/fix/apply-network-to-sd-macos.sh"
+    else
+        error "Script not found: $SCRIPT_DIR/fix/apply-network-to-sd-macos.sh"
+        exit 1
+    fi
+}
+
 ################################################################################
 # MAIN MENU
 ################################################################################
@@ -204,11 +234,14 @@ show_menu() {
     echo "3) Fix audio hardware"
     echo "4) Fix network configuration"
     echo "5) Fix SSH configuration"
+    echo "5b) Fix SSH host key mismatch (reflashed Pi)"
     echo "6) Fix AMP100 hardware"
     echo "7) Fix all systems"
     echo "8) Harden SD card (bootfs/rootfs)"
     echo "9) macOS: Repair rootfs + harden SD (one-shot)"
     echo "10) macOS: SD repair preflight (no changes)"
+    echo "11) macOS: Apply display config to SD (Waveshare 7.9\")"
+    echo "12) macOS: Apply network+SSH to SD (eth0 static 192.168.10.2)"
     echo "0) Exit"
     echo ""
     read -p "Select option: " choice
@@ -225,6 +258,8 @@ main() {
         fix_network
     elif [ "$1" = "--ssh" ] || [ "$1" = "-s" ]; then
         fix_ssh
+    elif [ "$1" = "--ssh-hostkey" ]; then
+        fix_ssh_hostkey "$@"
     elif [ "$1" = "--amp100" ] || [ "$1" = "-A" ]; then
         fix_amp100
     elif [ "$1" = "--all" ] || [ "$1" = "-a" ]; then
@@ -235,6 +270,10 @@ main() {
         fix_sd_macos
     elif [ "$1" = "--sd-macos-preflight" ]; then
         fix_sd_macos_preflight
+    elif [ "$1" = "--display-sd-macos" ]; then
+        fix_display_sd_macos
+    elif [ "$1" = "--network-sd-macos" ]; then
+        fix_network_sd_macos
     elif [ -z "$1" ]; then
         # Interactive mode
         while true; do
@@ -245,11 +284,14 @@ main() {
                 3) fix_audio ;;
                 4) fix_network ;;
                 5) fix_ssh ;;
+                5b) fix_ssh_hostkey ;;
                 6) fix_amp100 ;;
                 7) fix_all ;;
                 8) fix_sd ;;
                 9) fix_sd_macos ;;
                 10) fix_sd_macos_preflight ;;
+                11) fix_display_sd_macos ;;
+                12) fix_network_sd_macos ;;
                 0) exit 0 ;;
                 *) error "Invalid option" ;;
             esac
@@ -258,7 +300,7 @@ main() {
         done
     else
         error "Unknown option: $1"
-        echo "Usage: $0 [--display|--touchscreen|--audio|--network|--ssh|--amp100|--all|--sd|--sd-macos|--sd-macos-preflight]"
+        echo "Usage: $0 [--display|--touchscreen|--audio|--network|--ssh|--amp100|--all|--sd|--sd-macos|--sd-macos-preflight|--display-sd-macos|--network-sd-macos]"
         exit 1
     fi
 }

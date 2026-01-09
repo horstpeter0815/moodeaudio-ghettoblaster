@@ -175,10 +175,10 @@ if [ -f "$FIX_SCRIPT" ]; then
         test_warn "Script enthält keinen SCREENSIZE Swap"
     fi
     
-    if grep -q "hdmi_scn_orient.*landscape" "$FIX_SCRIPT"; then
-        test_pass "Script setzt hdmi_scn_orient auf 'landscape'"
+    if grep -q "hdmi_scn_orient.*portrait" "$FIX_SCRIPT"; then
+        test_pass "Script setzt hdmi_scn_orient auf 'portrait'"
     else
-        test_warn "Script setzt hdmi_scn_orient nicht auf 'landscape'"
+        test_warn "Script setzt hdmi_scn_orient nicht auf 'portrait'"
     fi
     
     if [ -x "$FIX_SCRIPT" ]; then

@@ -110,6 +110,9 @@ This ensures all layers are synchronized:
 - **If display is upside down:** Check xrandr rotation (should be "left", not "right")
 - **If window is wrong size:** Ensure `--window-size="1280,400"` is set correctly
 - **If content is scaled wrong:** Ensure `--force-device-scale-factor=1` is present
+- **If you get a white illuminated screen:** Chromium sometimes renders a blank/white window on Pi 5 when started with GPU explicitly disabled.
+  - Remove flags like `--disable-gpu` / `--disable-software-rasterizer`
+  - Prefer letting KMS + the Pi GPU handle rendering
 
 ## Files Modified
 
@@ -117,6 +120,13 @@ This ensures all layers are synchronized:
 2. `/boot/firmware/cmdline.txt` - Kernel video mode and rotation
 3. `/home/andre/.xinitrc` - X11 rotation and Chromium launch
 4. moOde database - `hdmi_scn_orient` = 'portrait'
+5. `/etc/X11/xorg.conf.d/99-touch-calibration.conf` - Touch transformation matrix for rotated display
+
+## Custom Build Notes (this repo)
+
+- **Chromium launch**: In the custom build, Chromium is started via `localdisplay.service` and `/usr/local/bin/start-chromium-clean.sh`.
+- **Avoid forced Peppy overlay**: Do not enable `peppymeter-extended-displays.service` by default.
+  - It can force PeppyMeter to start outside moOde’s own `local_display/peppy_display` logic, which is a common cause of “white screen”/overlay regressions.
 
 ## Verification Commands
 
