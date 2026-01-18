@@ -1,0 +1,8 @@
+To disable avahi-daemon.socket, run these commands in Terminal:
+
+cd /Volumes/rootfs/etc/systemd/system
+rm -f avahi-daemon.socket avahi-daemon.service
+ln -s /dev/null avahi-daemon.socket
+ln -s /dev/null avahi-daemon.service
+
+This will create symlinks that mask (disable) avahi-daemon.

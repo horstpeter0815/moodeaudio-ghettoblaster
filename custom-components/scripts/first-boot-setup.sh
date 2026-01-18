@@ -193,6 +193,104 @@ systemctl enable auto-fix-display.service 2>/dev/null || true
 log "✅ Services enabled"
 
 ################################################################################
+# 8.5. Enable MPD service (CRITICAL - moOde needs this)
+################################################################################
+
+log "Enabling MPD service (CRITICAL)..."
+systemctl enable mpd 2>/dev/null || true
+systemctl start mpd 2>/dev/null || true
+if systemctl is-active --quiet mpd; then
+    log "✅ MPD enabled and started"
+else
+    log "⚠️  MPD failed to start (will retry)"
+fi
+
+################################################################################
+# 8.6. Enable web services
+################################################################################
+
+log "Enabling web services..."
+systemctl enable nginx 2>/dev/null || true
+systemctl enable php8.4-fpm 2>/dev/null || systemctl enable php-fpm 2>/dev/null || true
+systemctl start nginx 2>/dev/null || true
+systemctl start php8.4-fpm 2>/dev/null || systemctl start php-fpm 2>/dev/null || true
+log "✅ Web services enabled"
+
+################################################################################
+# 8.7. Set database initial values
+################################################################################
+
+log "Setting database initial values..."
+MOODE_DB="/var/local/www/db/moode-sqlite3.db"
+if [ -f "$MOODE_DB" ]; then
+    # Wait for database to be ready
+    for i in {1..30}; do
+        if sqlite3 "$MOODE_DB" "SELECT 1;" > /dev/null 2>&1; then
+            break
+        fi
+        sleep 1
+    done
+    
+    # Set critical database values
+    sqlite3 "$MOODE_DB" << 'SQL' 2>/dev/null || true
+UPDATE cfg_system SET value='0' WHERE param='peppy_display';
+UPDATE cfg_system SET value='portrait' WHERE param='hdmi_scn_orient';
+UPDATE cfg_mpd SET value='alsa' WHERE param='alsa_output_mode';
+UPDATE cfg_mpd SET value='sndrpihifiberry' WHERE param='i2sdevice';
+INSERT OR IGNORE INTO cfg_system (param, value) VALUES ('peppy_display', '0');
+INSERT OR IGNORE INTO cfg_system (param, value) VALUES ('hdmi_scn_orient', 'portrait');
+INSERT OR IGNORE INTO cfg_mpd (param, value) VALUES ('alsa_output_mode', 'alsa');
+INSERT OR IGNORE INTO cfg_mpd (param, value) VALUES ('i2sdevice', 'sndrpihifiberry');
+SQL
+    log "✅ Database initial values set"
+else
+    log "⚠️  Database not found, will be set on next boot"
+fi
+
+################################################################################
+# 8.8. Set file permissions
+################################################################################
+
+log "Setting file permissions..."
+chown -R www-data:www-data /var/www 2>/dev/null || true
+find /var/www -type f -exec chmod 644 {} ; 2>/dev/null || true
+find /var/www -type d -exec chmod 755 {} ; 2>/dev/null || true
+log "✅ File permissions set"
+
+################################################################################
+# 8.9. Configure PeppyMeter (disabled by default)
+################################################################################
+
+log "Configuring PeppyMeter..."
+if [ -f "/etc/peppymeter/config.txt" ]; then
+    sed -i 's/^screen.width = .*/screen.width = 1280/' /etc/peppymeter/config.txt 2>/dev/null || true
+    sed -i 's/^screen.height = .*/screen.height = 400/' /etc/peppymeter/config.txt 2>/dev/null || true
+    sed -i 's/^exit.on.touch = .*/exit.on.touch = True/' /etc/peppymeter/config.txt 2>/dev/null || true
+    log "✅ PeppyMeter config set to 1280x400, touch enabled"
+fi
+systemctl disable peppymeter 2>/dev/null || true
+log "✅ PeppyMeter service disabled by default"
+
+################################################################################
+# 8.10. Configure display rotation (boot level)
+################################################################################
+
+log "Configuring display rotation..."
+if [ -f "/boot/firmware/config.txt" ]; then
+    if ! grep -q "^display_rotate=1" /boot/firmware/config.txt; then
+        echo "display_rotate=1" >> /boot/firmware/config.txt
+        log "✅ display_rotate=1 added to config.txt"
+    fi
+fi
+
+if [ -f "/boot/firmware/cmdline.txt" ]; then
+    if ! grep -q "fbcon=rotate:1" /boot/firmware/cmdline.txt; then
+        sed -i 's/$/ fbcon=rotate:1/' /boot/firmware/cmdline.txt
+        log "✅ fbcon=rotate:1 added to cmdline.txt"
+    fi
+fi
+log "✅ Display rotation configured"
+################################################################################
 # 9. Mark as done
 ################################################################################
 

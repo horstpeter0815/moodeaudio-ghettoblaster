@@ -114,27 +114,67 @@ show_build_menu() {
 show_fix_menu() {
     clear_screen
     show_header
-    echo -e "${GREEN}Fix Tools:${NC}"
+    echo -e "${GREEN}Fix Tools (GitHub-First Approach):${NC}"
     echo ""
-    echo "  1) Fix display issues"
-    echo "  2) Fix touchscreen"
-    echo "  3) Fix audio hardware"
-    echo "  4) Fix network configuration"
-    echo "  5) Fix SSH configuration"
-    echo "  6) Fix AMP100 hardware"
-    echo "  7) Fix all systems"
+    echo -e "${YELLOW}⚠️  ALWAYS check GitHub for working configs before fixing!${NC}"
+    echo ""
+    echo "  1) 🔍 Check GitHub for working configs"
+    echo "  2) 📥 Restore from GitHub (v1.0 working config)"
+    echo "  3) 🏷️  Tag current system as working"
+    echo ""
+    echo "  --- Fix Options (check GitHub first!) ---"
+    echo "  4) Fix display issues"
+    echo "  5) Fix touchscreen"
+    echo "  6) Fix audio hardware"
+    echo "  7) Fix network configuration"
+    echo "  8) Fix SSH configuration"
+    echo "  9) Fix AMP100 hardware"
+    echo "  a) Fix all systems"
     echo "  0) Back to main menu"
     echo ""
     read -p "Select option: " choice
     
     case $choice in
-        1) "$SCRIPT_DIR/fix.sh" --display ;;
-        2) "$SCRIPT_DIR/fix.sh" --touchscreen ;;
-        3) "$SCRIPT_DIR/fix.sh" --audio ;;
-        4) "$SCRIPT_DIR/fix.sh" --network ;;
-        5) "$SCRIPT_DIR/fix.sh" --ssh ;;
-        6) "$SCRIPT_DIR/fix.sh" --amp100 ;;
-        7) "$SCRIPT_DIR/fix.sh" --all ;;
+        1) 
+            echo ""
+            echo "Checking GitHub for working configurations..."
+            git log --all --grep="working\|v1.0\|tested\|complete" --oneline | head -10
+            echo ""
+            echo "Working configs found in:"
+            git log --all --grep="working\|v1.0" --format="%h %s" | head -5
+            read -p "Press Enter to continue..."
+            ;;
+        2)
+            echo ""
+            echo "Restoring v1.0 working configuration from GitHub..."
+            if [ -f "$PROJECT_ROOT/restore-v1.0-from-github.sh" ]; then
+                bash "$PROJECT_ROOT/restore-v1.0-from-github.sh"
+            else
+                echo "Restore script not found. Checking GitHub commit 84aa8c2..."
+                git show 84aa8c2 --stat | head -20
+            fi
+            read -p "Press Enter to continue..."
+            ;;
+        3)
+            read -p "Tag name (e.g., v1.0-working): " tag_name
+            if [ -n "$tag_name" ]; then
+                git tag "$tag_name"
+                echo "✅ Tagged as: $tag_name"
+                read -p "Push to GitHub? (y/n): " push
+                if [ "$push" = "y" ]; then
+                    git push origin "$tag_name"
+                    echo "✅ Pushed to GitHub"
+                fi
+            fi
+            read -p "Press Enter to continue..."
+            ;;
+        4) "$SCRIPT_DIR/fix.sh" --display ;;
+        5) "$SCRIPT_DIR/fix.sh" --touchscreen ;;
+        6) "$SCRIPT_DIR/fix.sh" --audio ;;
+        7) "$SCRIPT_DIR/fix.sh" --network ;;
+        8) "$SCRIPT_DIR/fix.sh" --ssh ;;
+        9) "$SCRIPT_DIR/fix.sh" --amp100 ;;
+        a) "$SCRIPT_DIR/fix.sh" --all ;;
         0) return ;;
         *) echo -e "${RED}Invalid option${NC}" ;;
     esac

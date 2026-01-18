@@ -1,0 +1,53 @@
+# Dockerfile for systemd testing and boot profiling
+# Based on Debian Bookworm (similar to Raspberry Pi OS)
+# Includes systemd, systemd-analyze, and debugging tools
+
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install systemd and testing tools
+RUN apt-get update && apt-get install -y \
+    systemd \
+    systemd-sysv \
+    dbus \
+    systemd-analyze \
+    systemd-cgtop \
+    strace \
+    ltrace \
+    procps \
+    iputils-ping \
+    net-tools \
+    curl \
+    wget \
+    sudo \
+    openssh-server \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create test user (matching moOde requirements)
+RUN groupadd -g 1000 andre && \
+    useradd -m -s /bin/bash -u 1000 -g 1000 andre && \
+    echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre && \
+    chmod 0440 /etc/sudoers.d/andre
+
+# Create necessary directories for systemd testing
+RUN mkdir -p \
+    /etc/systemd/system \
+    /lib/systemd/system \
+    /run/systemd/system \
+    /var/log \
+    /boot/firmware \
+    /workspace/custom-components \
+    /workspace/moode-source
+
+# Prevent systemd from starting services that require hardware
+RUN systemctl mask getty@tty1.service || true
+
+# Setup working directory
+WORKDIR /workspace
+
+# Start systemd for testing
+CMD ["/lib/systemd/systemd"]

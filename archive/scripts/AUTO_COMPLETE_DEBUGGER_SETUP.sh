@@ -5,7 +5,7 @@ SERIAL_PORT="/dev/cu.usbmodem214302"
 BAUDRATE="115200"
 PI_IP="192.168.178.143"
 PI_USER="andre"
-PI_PASSWORD="4512"
+PI_PASSWORD=""
 LOG_FILE="auto-debugger-$(date +%Y%m%d_%H%M%S).log"
 
 echo "═══════════════════════════════════════════════════════════" | tee -a "$LOG_FILE"

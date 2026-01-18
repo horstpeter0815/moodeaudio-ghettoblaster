@@ -1,6 +1,6 @@
 #!/bin/bash
 # Automatically detect and burn image to SD card
-# Uses password 4512 for sudo
+# Uses password  for sudo
 
 set -e
 
@@ -72,7 +72,7 @@ echo "   Progress will be shown..."
 echo ""
 
 # Use sudo with password
-echo "4512" | sudo -S dd if="$LATEST_IMG" of="/dev/r$SD_DEVICE" bs=1m status=progress 2>&1
+echo "" | sudo -S dd if="$LATEST_IMG" of="/dev/r$SD_DEVICE" bs=1m status=progress 2>&1
 
 BURN_EXIT=$?
 
@@ -109,7 +109,7 @@ if [ $BURN_EXIT -eq 0 ]; then
     echo "  ✅ 01-ssh-enable.service"
     echo "  ✅ 02-eth0-configure.service"
     echo "  ✅ fix-user-id.service"
-    echo "  ✅ Password: 4512"
+    echo "  ✅ Password: "
 else
     echo ""
     echo "❌ ERROR: Image burn failed (exit code: $BURN_EXIT)"

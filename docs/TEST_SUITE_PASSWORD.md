@@ -5,7 +5,7 @@
 The test suite uses a password file to avoid manual password entry:
 
 - **File:** `test-password.txt`
-- **Password:** `4512`
+- **Password:** ``
 - **Permissions:** `600` (read-only for owner)
 
 ## Usage
@@ -32,7 +32,7 @@ PASSWORD=$(get_test_password)
 
 The build script (`imgbuild/moode-cfg/stage3_03-ghettoblaster-custom_00-run-chroot.sh`) also reads from the password file during image creation.
 
-If the password file is available in the build workspace, it will be used. Otherwise, it defaults to `4512`.
+If the password file is available in the build workspace, it will be used. Otherwise, it defaults to ``.
 
 ## Changing the Password
 

@@ -1,8 +1,9 @@
 [Unit]
 Description=Ghettoblaster User ID Fix (moOde requires UID 1000)
 After=multi-user.target
-After=moode-startup.service
+# REMOVED: After=moode-startup.service (can cause boot hang - moode-startup may not exist)
 Wants=multi-user.target
+DefaultDependencies=no
 
 [Service]
 Type=oneshot

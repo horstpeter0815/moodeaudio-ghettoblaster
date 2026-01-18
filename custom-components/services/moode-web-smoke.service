@@ -1,0 +1,15 @@
+[Unit]
+Description=moOde WebUI smoke server (php -S /var/www/html)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/moode-web-smoke-server.sh
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

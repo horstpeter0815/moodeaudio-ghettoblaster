@@ -1,0 +1,23 @@
+#!/bin/bash
+# Direkte Befehle für Pi - Kopiere diese Befehle und führe sie auf dem Pi aus
+
+echo "=== WLAN KONFIGURATION: nam yang 2 ==="
+echo ""
+echo "Führe diese Befehle auf dem Pi aus:"
+echo ""
+echo "# 1. Prüfe verfügbare Netzwerke:"
+echo "nmcli device wifi list"
+echo ""
+echo "# 2. Erstelle Verbindung (ohne Passwort):"
+echo "sudo nmcli connection add type wifi con-name 'nam-yang-2' ifname wlan0 ssid 'nam yang 2' autoconnect yes"
+echo ""
+echo "# ODER mit Passwort:"
+echo "sudo nmcli connection add type wifi con-name 'nam-yang-2' ifname wlan0 ssid 'nam yang 2' autoconnect yes wifi-sec.key-mgmt wpa-psk wifi-sec.psk 'DEIN_PASSWORT'"
+echo ""
+echo "# 3. Verbinde jetzt:"
+echo "sudo nmcli connection up 'nam-yang-2'"
+echo ""
+echo "# 4. Prüfe Status:"
+echo "nmcli device status"
+echo "ip addr show wlan0"
+echo ""

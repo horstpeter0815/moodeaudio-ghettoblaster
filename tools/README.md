@@ -1,451 +1,231 @@
-# 🛠️ Toolbox - Unified Tools
+# Professional Debugging Tools
 
-**Date:** 2025-12-19  
-**Purpose:** Simplified, unified interface for all build, fix, test, and monitor operations
+These tools follow professional debugging approaches to fix build issues systematically.
+
+## Quick Start
+
+### 1. Compare Working vs New Build
+
+**When to use:** You have a working moOde SD card and want to see what's different in the new build.
+
+```bash
+# Mount both SD cards
+# Then run:
+./tools/compare-working-vs-new.sh
+```
+
+**What it does:**
+- Detects both SD cards
+- Compares systemd configurations
+- Shows exact differences
+- Saves comparison report
+
+**Output:** `comparison-YYYYMMDD-HHMMSS/` directory with diff files
 
 ---
 
-## 📋 Overview
+### 2. Validate SD Card Fixes
 
-This toolbox consolidates **334+ shell scripts** into **4 unified tools** plus a launcher:
+**When to use:** After applying fixes, verify they're actually applied correctly.
 
-1. **`build.sh`** - Build and deployment management
-2. **`fix.sh`** - System fixes and configuration
-3. **`test.sh`** - Testing and validation
-4. **`monitor.sh`** - Monitoring and status checking
-5. **`toolbox.sh`** - Interactive menu launcher
+```bash
+./tools/validate-sd-card-fixes.sh /Volumes/rootfs
+```
+
+**What it checks:**
+- ✅ Services are masked correctly
+- ✅ Override files exist and are correct
+- ✅ Source service files are deleted
+- ✅ network-online.target.wants is removed
+- ✅ All required overrides exist
+
+**Output:** Pass/Fail with detailed report
 
 ---
 
-## 🤖 AI / RAG Tool (`ai.sh`)
+### 3. Analyze Systemd Dependencies
 
-**Purpose:** Manage "GhettoAI" Knowledge Base via **RAG** (Open WebUI)
+**When to use:** To understand WHY a service starts and what triggers it.
 
-**Functions:**
-- Check if KB needs refresh (`--status`)
-- Upload files to KB (`--upload`)
-- Generate RAG upload manifest (`--manifest`)
-- Verify AI stack (`--verify`)
-
-**Usage:**
 ```bash
-# Check if refresh is needed
-./tools/ai.sh --status
-
-# Upload all files to KB (requires token)
-OPENWEBUI_TOKEN='<jwt>' ./tools/ai.sh --upload
-
-# Regenerate manifest
-./tools/ai.sh --manifest
-
-# Verify Ollama + Open WebUI setup
-./tools/ai.sh --verify
-
-# Check Open WebUI availability
-./tools/ai.sh --openwebui
+./tools/analyze-systemd-dependencies.sh /Volumes/rootfs
 ```
 
-**Getting the Token:**
-1. Open http://localhost:3000 in browser
-2. DevTools → Console → `localStorage.token`
-3. Copy the JWT (starts with `eyJ...`)
+**What it shows:**
+- Dependency chains
+- What triggers what
+- Override files
+- Service relationships
+
+**Output:** `dependency-analysis-YYYYMMDD-HHMMSS/` directory with analysis
 
 ---
 
-## 🚀 Quick Start
+### 4. Apply Working Configuration
 
-### **Interactive Mode (Recommended):**
+**When to use:** You have a working SD card and want to copy its config to new build.
+
 ```bash
-./tools/toolbox.sh
+./tools/apply-working-config.sh /Volumes/working-rootfs /Volumes/rootfs
 ```
 
-### **Command Line Mode:**
-```bash
-# Build
-./tools/build.sh --build
-./tools/build.sh --monitor
-./tools/build.sh --validate
-./tools/build.sh --deploy
-./tools/build.sh --cleanup
-./tools/build.sh --status
+**What it does:**
+- Copies all systemd overrides from working to new
+- Copies service masks
+- Removes unwanted directories
+- Applies fixes automatically
 
-# Fix
-./tools/fix.sh --display
-./tools/fix.sh --touchscreen
-./tools/fix.sh --audio
-./tools/fix.sh --network
-./tools/fix.sh --ssh
-./tools/fix.sh --amp100
-./tools/fix.sh --all
-
-# Test
-./tools/test.sh --display
-./tools/test.sh --touchscreen
-./tools/test.sh --audio
-./tools/test.sh --peppy
-./tools/test.sh --all
-./tools/test.sh --verify
-
-# Monitor
-./tools/monitor.sh --build
-./tools/monitor.sh --pi
-./tools/monitor.sh --serial
-./tools/monitor.sh --all
-./tools/monitor.sh --status
-```
+**Output:** New build configured like working system
 
 ---
 
-## 🔨 Build Tool (`build.sh`)
+## Workflow
 
-**Purpose:** Manage image builds and deployment
+### Recommended Workflow
 
-**Functions:**
-- Build new images
-- Monitor build progress
-- Validate build images
-- Deploy images to SD cards
-- Cleanup old images
-- Show build status
+1. **Compare first:**
+   ```bash
+   ./tools/compare-working-vs-new.sh
+   ```
+   See what's different
 
-**Usage:**
-```bash
-./tools/build.sh [--build|--monitor|--validate|--deploy|--cleanup|--status]
-```
+2. **Apply working config:**
+   ```bash
+   ./tools/apply-working-config.sh /Volumes/working-rootfs /Volumes/rootfs
+   ```
+   Copy working configuration
 
-**Examples:**
-```bash
-# Start a new build
-./tools/build.sh --build
+3. **Validate:**
+   ```bash
+   ./tools/validate-sd-card-fixes.sh /Volumes/rootfs
+   ```
+   Verify fixes are applied
 
-# Monitor current build
-./tools/build.sh --monitor
+4. **Test:**
+   - Boot on Raspberry Pi
+   - If it works, document what was applied
+   - If it fails, analyze dependencies
 
-# Validate latest image
-./tools/build.sh --validate
-
-# Deploy to SD card
-./tools/build.sh --deploy
-
-# Cleanup old images (keep only latest)
-./tools/build.sh --cleanup
-
-# Show build status
-./tools/build.sh --status
-```
+5. **Analyze if needed:**
+   ```bash
+   ./tools/analyze-systemd-dependencies.sh /Volumes/rootfs
+   ```
+   Understand dependency chain
 
 ---
 
-## 🔧 Fix Tool (`fix.sh`)
+## Examples
 
-**Purpose:** Fix system issues and configuration
+### Example 1: First Time Setup
 
-**Functions:**
-- Fix display issues
-- Fix touchscreen
-- Fix audio hardware
-- Fix network configuration
-- Fix SSH configuration
-- Fix AMP100 hardware
-- Fix all systems
-
-**WISSENSBASIS Integration:**
-- Automatically shows relevant solutions from `WISSENSBASIS/03_PROBLEME_LOESUNGEN.md` before applying fixes
-- Helps identify known problems and tested solutions
-
-**Usage:**
 ```bash
-./tools/fix.sh [--display|--touchscreen|--audio|--network|--ssh|--amp100|--all]
+# 1. Mount working SD card and new build SD card
+# 2. Compare
+./tools/compare-working-vs-new.sh
+
+# 3. Review differences in comparison-*/ directory
+# 4. Apply working config
+./tools/apply-working-config.sh /Volumes/working-rootfs /Volumes/rootfs
+
+# 5. Validate
+./tools/validate-sd-card-fixes.sh /Volumes/rootfs
+
+# 6. Test boot
 ```
 
-**Examples:**
+### Example 2: After Manual Fixes
+
 ```bash
-# Fix display rotation
-./tools/fix.sh --display
+# After manually applying fixes, validate:
+./tools/validate-sd-card-fixes.sh /Volumes/rootfs
 
-# Fix touchscreen coordinates
-./tools/fix.sh --touchscreen
+# If validation fails, see what's wrong
+# Fix issues
+# Validate again
+```
 
-# Fix audio hardware
-./tools/fix.sh --audio
+### Example 3: Understanding a Problem
 
-# Fix all systems
-./tools/fix.sh --all
+```bash
+# Analyze dependencies to understand why something starts:
+./tools/analyze-systemd-dependencies.sh /Volumes/rootfs
+
+# Review output in dependency-analysis-*/ directory
+# Understand the chain
+# Apply appropriate fix
 ```
 
 ---
 
-## 🧪 Test Tool (`test.sh`)
+## Integration with Build Process
 
-**Purpose:** Test and validate system components
+### Add to Build Script
 
-**Functions:**
-- Test display
-- Test touchscreen
-- Test audio system
-- Test PeppyMeter
-- Run complete test suite
-- Verify all systems
-
-**WISSENSBASIS Integration:**
-- Automatically documents test results in `WISSENSBASIS/04_TESTS_ERGEBNISSE.md`
-- Captures test output and results for future reference
-
-**Usage:**
 ```bash
-./tools/test.sh [--display|--touchscreen|--audio|--peppy|--all|--verify]
+# In build script, after image is created:
+# 1. Mount image
+# 2. Validate fixes
+./tools/validate-sd-card-fixes.sh /mnt/rootfs
+
+# If validation fails, build fails
+if [ $? -ne 0 ]; then
+    echo "❌ Validation failed - build aborted"
+    exit 1
+fi
 ```
 
-**Examples:**
+### Add to CI/CD
+
 ```bash
-# Test display resolution
-./tools/test.sh --display
-
-# Test touchscreen
-./tools/test.sh --touchscreen
-
-# Run complete test suite
-./tools/test.sh --all
-
-# Verify all systems
-./tools/test.sh --verify
+# In CI pipeline:
+# 1. Build image
+# 2. Mount and validate
+# 3. Report results
 ```
 
 ---
 
-## 📡 Monitor Tool (`monitor.sh`)
+## Troubleshooting
 
-**Purpose:** Monitor system status and processes
-
-**Functions:**
-- Monitor build progress
-- Monitor Pi systems
-- Monitor serial console
-- Monitor all systems
-- Check system status
-
-**WISSENSBASIS Integration:**
-- Shows hardware configuration from `WISSENSBASIS/02_HARDWARE.md` in status checks
-- Displays known system configurations and IP addresses
-
-**Usage:**
+### Tool not found
 ```bash
-./tools/monitor.sh [--build|--pi|--serial|--all|--status]
-```
+# Make sure you're in the project root
+cd /Users/andrevollmer/moodeaudio-cursor
 
-**Examples:**
-```bash
-# Monitor build progress
-./tools/monitor.sh --build
-
-# Monitor Pi systems
-./tools/monitor.sh --pi
-
-# Check system status
-./tools/monitor.sh --status
-```
-
----
-
-## 🎯 Toolbox Launcher (`toolbox.sh`)
-
-**Purpose:** Interactive menu for all tools
-
-**Features:**
-- Main menu with all tool categories
-- Sub-menus for each tool category
-- System status display
-- Cleanup tools
-- Documentation access
-
-**Usage:**
-```bash
-./tools/toolbox.sh
-```
-
-**Menu Structure:**
-```
-Main Menu
-├── Build Tools
-│   ├── Build new image
-│   ├── Monitor build progress
-│   ├── Validate build image
-│   ├── Deploy image to SD card
-│   ├── Cleanup old images
-│   └── Show build status
-├── Fix Tools
-│   ├── Fix display issues
-│   ├── Fix touchscreen
-│   ├── Fix audio hardware
-│   ├── Fix network configuration
-│   ├── Fix SSH configuration
-│   ├── Fix AMP100 hardware
-│   └── Fix all systems
-├── Test Tools
-│   ├── Test display
-│   ├── Test touchscreen
-│   ├── Test audio system
-│   ├── Test PeppyMeter
-│   ├── Run complete test suite
-│   └── Verify all systems
-├── Monitor Tools
-│   ├── Monitor build progress
-│   ├── Monitor Pi systems
-│   ├── Monitor serial console
-│   ├── Monitor all systems
-│   └── Check system status
-├── System Status
-├── Cleanup Tools
-└── Documentation
-```
-
----
-
-## 📁 Directory Structure
-
-```
-tools/
-├── build.sh          # Build and deployment tool
-├── fix.sh            # Fix and configuration tool
-├── test.sh           # Test and validation tool
-├── monitor.sh        # Monitor and status tool
-├── toolbox.sh        # Interactive launcher
-├── README.md         # This file
-├── build/            # Build-related scripts (future)
-├── fix/              # Fix-related scripts (future)
-├── test/             # Test-related scripts (future)
-├── monitor/          # Monitor-related scripts (future)
-├── setup/            # Setup-related scripts (future)
-└── utils/            # Utility scripts
-    └── wissensbasis.sh  # WISSENSBASIS helper (search, update, document)
-```
-
----
-
-## 🔄 Migration from Old Scripts
-
-**Old way:**
-```bash
-./START_BUILD_NOW.sh
-./BUILD_MONITOR_REAL.sh
-./fix_everything.sh
-./verify_everything.sh
-./CHECK_PI_STATUS.sh
-```
-
-**New way:**
-```bash
-./tools/build.sh --build
-./tools/build.sh --monitor
-./tools/fix.sh --all
-./tools/test.sh --verify
-./tools/monitor.sh --status
-```
-
-**Or use the toolbox:**
-```bash
-./tools/toolbox.sh
-# Then select from menu
-```
-
----
-
-## 📝 Notes
-
-- All tools support both **interactive mode** (no arguments) and **command line mode** (with arguments)
-- Old scripts are still available in the root directory
-- Tools automatically find and use the best available underlying script
-- All tools include error handling and user-friendly output
-- Tools are color-coded for better readability
-
----
-
-## 🆘 Troubleshooting
-
-**Tool not found:**
-```bash
+# Make tools executable
 chmod +x tools/*.sh
 ```
 
-**Underlying script not found:**
-- Tools will show an error message
-- Check that the required scripts exist in the project root
-- Some tools have fallback methods
-
-**Permission denied:**
+### SD card not detected
 ```bash
-chmod +x tools/*.sh
+# Check if SD card is mounted
+diskutil list
+
+# Mount manually if needed
+diskutil mountDisk /dev/disk4
+```
+
+### Permission denied
+```bash
+# Tools use sudo for some operations
+# You'll be prompted for password ( for Mac)
 ```
 
 ---
 
-## 📚 WISSENSBASIS Integration
+## Best Practices
 
-The toolbox is fully integrated with the project's knowledge base (`WISSENSBASIS/`):
-
-### **WISSENSBASIS Helper (`utils/wissensbasis.sh`)**
-
-**Purpose:** Search, update, and document in the knowledge base
-
-**Usage:**
-```bash
-# Search for problems/solutions
-./tools/utils/wissensbasis.sh search <keyword>
-
-# Show relevant solutions by type
-./tools/utils/wissensbasis.sh solution <display|touchscreen|audio|network|boot>
-
-# Add test result
-./tools/utils/wissensbasis.sh add-test "Test Name" "SUCCESS|FAILED" "details"
-
-# Add problem/solution
-./tools/utils/wissensbasis.sh add-problem "Problem" "Solution" "Status"
-```
-
-**Examples:**
-```bash
-# Find solutions for display issues
-./tools/utils/wissensbasis.sh solution display
-
-# Document a test result
-./tools/utils/wissensbasis.sh add-test "Display Rotation Test" "SUCCESS" "display_rotate=3 works"
-
-# Add a new problem/solution
-./tools/utils/wissensbasis.sh add-problem "New Issue" "Solution steps" "Gelöst"
-```
-
-### **Automatic Integration:**
-
-- **`fix.sh`**: Shows relevant solutions before applying fixes
-- **`test.sh`**: Automatically documents test results
-- **`monitor.sh`**: Displays hardware info from WISSENSBASIS
-
-### **WISSENSBASIS Structure:**
-
-```
-WISSENSBASIS/
-├── 00_INDEX.md                    # Index and navigation
-├── 01_PROJEKT_UEBERSICHT.md       # Project overview
-├── 02_HARDWARE.md                 # Hardware documentation
-├── 03_PROBLEME_LOESUNGEN.md       # Problems & solutions (auto-updated)
-├── 04_TESTS_ERGEBNISSE.md         # Test results (auto-updated)
-├── 05_ANSATZE_VERGLEICH.md        # Approach comparison
-├── 06_BEST_PRACTICES.md           # Best practices
-├── 07_IMPLEMENTIERUNGEN.md        # Implementation guides
-└── 08_TROUBLESHOOTING.md          # Troubleshooting guide
-```
+1. **Always compare first** - Don't guess, compare working vs broken
+2. **Validate after fixes** - Ensure fixes are actually applied
+3. **Document what works** - Save working configurations
+4. **Test incrementally** - Test after each fix
+5. **Use version control** - Tag working builds
 
 ---
 
-## 📚 Related Documentation
+## Next Steps
 
-- `TOOLS_INVENTORY.md` - Complete inventory of all 334+ scripts
-- `WISSENSBASIS/00_INDEX.md` - Knowledge base index
-- `COMPLETE_BOOT_PROCESS_ANALYSIS.md` - Boot process analysis
-- `CUSTOM_BUILD_NEXT_STEPS.md` - Build next steps
-
----
-
-**Last Updated:** 2025-12-19  
-**WISSENSBASIS Integration:** ✅ Complete
-
+1. Use these tools for your next build
+2. Document what works
+3. Create automated validation in build process
+4. Build knowledge base of working configurations

@@ -1,14 +1,18 @@
 [Unit]
 Description=Ghettoblaster SSH and Sudoers Fix (PERMANENT)
 After=multi-user.target
-After=moode-startup.service
+# REMOVED: After=moode-startup.service (can cause boot hang - moode-startup may not exist)
 Wants=multi-user.target
+DefaultDependencies=no
 
 [Service]
 Type=oneshot
 # CRITICAL: Enable and start SSH in multiple ways
-ExecStart=/bin/bash -c 'echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre && chmod 0440 /etc/sudoers.d/andre && visudo -c -f /etc/sudoers.d/andre 2>/dev/null || true && systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true && systemctl enable ssh.service 2>/dev/null || systemctl enable sshd.service 2>/dev/null || true && systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true && touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true && systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true && echo "✅ SSH and Sudoers fixed"'
+# All commands have timeouts to prevent hangs
+ExecStart=/bin/bash -c 'timeout 3 bash -c "echo \"andre ALL=(ALL) NOPASSWD: ALL\" > /etc/sudoers.d/andre && chmod 0440 /etc/sudoers.d/andre" 2>/dev/null || true; timeout 2 visudo -c -f /etc/sudoers.d/andre 2>/dev/null || true; timeout 2 systemctl enable ssh 2>/dev/null || timeout 2 systemctl enable sshd 2>/dev/null || true; timeout 2 systemctl start ssh 2>/dev/null || timeout 2 systemctl start sshd 2>/dev/null || true; timeout 2 touch /boot/firmware/ssh 2>/dev/null || timeout 2 touch /boot/ssh 2>/dev/null || true; exit 0'
 RemainAfterExit=yes
+TimeoutStartSec=5
+TimeoutStopSec=2
 
 [Install]
 WantedBy=multi-user.target

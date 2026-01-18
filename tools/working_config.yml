@@ -1,0 +1,42 @@
+---
+devices:
+  samplerate: 44100
+  chunksize: 4096
+  queuelimit: 1
+  capture:
+    type: Stdin
+    channels: 2
+    format: S32LE
+  playback:
+    type: Alsa
+    channels: 2
+    device: "plughw:1,0"
+    format: S32LE
+
+mixers:
+  mono:
+    channels:
+      in: 2
+      out: 2
+    mapping:
+      - dest: 0
+        sources:
+          - channel: 0
+            gain: 0
+            inverted: false
+      - dest: 1
+        sources:
+          - channel: 1
+            gain: 0
+            inverted: false
+
+filters:
+  # Bose 901 + Fostex filters would go here
+  # For now, just pass-through
+
+pipeline:
+  - type: Mixer
+    name: mono
+    channels:
+      in: 2
+      out: 2

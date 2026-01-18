@@ -78,6 +78,9 @@ Ask:
 - "How is the Waveshare 7.9 HDMI display rotated to 1280x400?"
 - "Which ALSA chain is used for PeppyMeter + CamillaDSP?"
 - "How do I deploy changes using the toolbox?"
+- "How do I test systemd fixes before building?"
+- "How do I check SD card status on macOS?"
+- "What Docker testing tools are available?"
 
 ---
 
@@ -89,3 +92,26 @@ The toolbox has a dedicated AI menu:
 cd ~/moodeaudio-cursor && ./tools/toolbox.sh
 # → 9) AI / RAG Tools
 ```
+
+## Recent Updates (January 15, 2026)
+
+### Docker Testing and Profiling Toolbox
+- New Docker-based testing infrastructure for systemd configurations
+- Test fixes before building (saves 8-12 hours)
+- Boot performance profiling with systemd-analyze
+- Dependency analysis and circular dependency detection
+- See: `tools/test/README.md` for full documentation
+
+### SD Card Management Tools
+- macOS-specific SD card status checker
+- Auto-detection of Raspberry Pi SD cards
+- Safe burn procedures
+- Complete guide: `docs/SD_CARD_MACOS_GUIDE.md`
+
+### Key Learnings
+- Docker testing is essential before builds
+- Shell execution has limitations (cannot execute sudo interactively)
+- Focus on script quality over repeated execution attempts
+- Comprehensive documentation is critical
+
+See `docs/LEARNING_SESSION_20260115.md` for complete details.

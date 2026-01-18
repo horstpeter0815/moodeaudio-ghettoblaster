@@ -16,15 +16,16 @@ log() {
 
 log "=== NETWORK IP FIX START ==="
 
-# Target IP: 192.168.178.161 (away from 142/143)
-TARGET_IP="192.168.178.161"
-GATEWAY="192.168.178.1"
+# Target IP: 192.168.2.3
+TARGET_IP="192.168.2.3"
+GATEWAY="192.168.2.1"
 NETMASK="255.255.255.0"
-DNS="192.168.178.1"
+DNS="192.168.2.1"
 
-# Check if systemd-networkd is used
-if [ -d "/etc/systemd/network" ]; then
-    log "Using systemd-networkd for network configuration"
+# SKIP systemd-networkd - 03-network-configure.service uses NetworkManager
+# Don't conflict with NetworkManager configuration
+if [ -d "/etc/systemd/network" ] && ! systemctl is-enabled NetworkManager >/dev/null 2>&1; then
+    log "Using systemd-networkd for network configuration (NetworkManager not enabled)"
     
     # Create ethernet network config (priority: static IP)
     cat > /etc/systemd/network/10-ethernet-static.network << EOF
@@ -53,6 +54,8 @@ EOF
     log "✅ systemd-networkd configs created"
     systemctl enable systemd-networkd 2>/dev/null || true
     systemctl restart systemd-networkd 2>/dev/null || true
+else
+    log "Skipping systemd-networkd - NetworkManager is being used"
     
 # Check if dhcpcd is used
 elif [ -f "/etc/dhcpcd.conf" ]; then

@@ -1,13 +1,13 @@
 # GhettoAI RAG Upload Manifest
 
-**Generated:** 2026-01-08 13:45:42  
+**Generated:** 2026-01-12 14:35:05  
 **Corpus root:** `/Users/andrevollmer/moodeaudio-cursor/rag-upload-files`  
-**Total files:** **225**
+**Total files:** **228**
 
 ## Recommended upload order (Open WebUI → Knowledge)
 
 1. **v1.0 docs (ground truth)**
-   - `rag-upload-files/v1.0-docs/` (**5** files)
+   - `rag-upload-files/v1.0-docs/` (**8** files)
 2. **Project documentation**
    - `rag-upload-files/documentation/` (**48** files)
 3. **Key configs (boot, ALSA, NetworkManager, systemd)**

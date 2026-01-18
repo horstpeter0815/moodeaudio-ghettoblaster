@@ -1,0 +1,65 @@
+# NullCity.DockerTest - Custom Build Test Environment
+# Tests the custom build with display fixes applied
+
+version: '3.8'
+
+services:
+  nullcity-dockertest:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    container_name: nullcity-dockertest
+    platform: linux/amd64
+    volumes:
+      - "/Users/andrevollmer/moodeaudio-cursor/imgbuild:/workspace/imgbuild"
+      - "/Users/andrevollmer/moodeaudio-cursor/custom-components:/workspace/custom-components"
+      - "/Users/andrevollmer/moodeaudio-cursor/moode-source:/workspace/moode-source:ro"
+      - build-cache:/workspace/cache
+      - test-results:/workspace/test-results
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - TZ=UTC
+      - MAKEFLAGS=-j$(nproc)
+      - DEB_BUILD_OPTIONS=parallel=$(nproc)
+      - NPROC=$(nproc)
+      - BUILD_TEST_MODE=true
+      - DISPLAY_FIX_APPLIED=true
+    stdin_open: true
+    tty: true
+    privileged: true
+    network_mode: host
+    command: >
+      bash -c "
+        echo '=== NullCity.DockerTest - Custom Build Test ===' &&
+        echo '' &&
+        echo 'Verifying build configuration...' &&
+        echo '' &&
+        # Verify moOde version (MUST be r1001 - best working version)
+        if grep -q 'IMG_NAME=moode-r1001' /workspace/imgbuild/moode-cfg/config; then
+          echo '✅ moOde version: CORRECT (r1001 - best working version)' &&
+        else
+          echo '❌ moOde version: INCORRECT (must be r1001, not broken current version)' &&
+          echo '   Current config:' &&
+          grep 'IMG_NAME' /workspace/imgbuild/moode-cfg/config &&
+          exit 1
+        fi &&
+        # Verify display cmdline script fix
+        if grep -q 'video=HDMI-A-1:400x1280M@60,rotate=90' /workspace/imgbuild/moode-cfg/stage3_03-ghettoblaster-custom_02-display-cmdline.sh && 
+           ! grep -q 'fbcon=rotate:1' /workspace/imgbuild/moode-cfg/stage3_03-ghettoblaster-custom_02-display-cmdline.sh; then
+          echo '✅ Display cmdline script: CORRECT (fbcon removed)' &&
+        else
+          echo '❌ Display cmdline script: INCORRECT (needs fix)' &&
+          exit 1
+        fi &&
+        echo '' &&
+        echo 'Starting build...' &&
+        cd /workspace/imgbuild &&
+        ./build.sh 2>&1 | tee /workspace/test-results/build.log &&
+        echo '' &&
+        echo '=== Build Complete ===' &&
+        echo 'Check /workspace/test-results/build.log for details'
+      "
+
+volumes:
+  build-cache:
+  test-results:

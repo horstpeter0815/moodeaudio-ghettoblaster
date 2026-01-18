@@ -11,19 +11,29 @@ services:
       - "/Users/andrevollmer/moodeaudio-cursor/imgbuild:/workspace/imgbuild"
       - "/Users/andrevollmer/moodeaudio-cursor/custom-components:/workspace/custom-components"
       - "/Users/andrevollmer/moodeaudio-cursor/moode-source:/workspace/moode-source:ro"
+      - "/Users/andrevollmer/moodeaudio-cursor/imgbuild/v1.0-config-export:/workspace/v1.0-config-export:ro"
       - build-cache:/workspace/cache
     environment:
       - DEBIAN_FRONTEND=noninteractive
       - TZ=UTC
-      - MAKEFLAGS=-j$(nproc)
-      - DEB_BUILD_OPTIONS=parallel=$(nproc)
-      - NPROC=$(nproc)
+      - MAKEFLAGS=-j12
+      - DEB_BUILD_OPTIONS=parallel=12
+      - NPROC=12
+      - APT_BUILD_OPTIONS=-j12
+      - DPKG_BUILD_OPTIONS=-j12
+      - DEB_BUILD_PARALLEL=12
     stdin_open: true
     tty: true
     privileged: true
     network_mode: host
-    # Resource limits removed - Docker Desktop will manage resources
-    # Using environment variables for CPU optimization instead
+    deploy:
+      resources:
+        limits:
+          cpus: '12'
+          memory: 32G
+        reservations:
+          cpus: '6'
+          memory: 16G
 
 volumes:
   build-cache:

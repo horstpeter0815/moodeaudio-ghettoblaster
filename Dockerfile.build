@@ -3,6 +3,14 @@ FROM --platform=linux/amd64 ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
+# Optimize apt for parallel downloads
+RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries && \
+    echo 'Acquire::http::MaxConnections "32";' >> /etc/apt/apt.conf.d/80-retries && \
+    echo 'Acquire::http::MaxConnectionsPerHost "16";' >> /etc/apt/apt.conf.d/80-retries && \
+    echo 'Acquire::Queue-Mode "access";' >> /etc/apt/apt.conf.d/80-retries && \
+    echo 'APT::Get::Assume-Yes "true";' >> /etc/apt/apt.conf.d/80-retries && \
+    echo 'APT::Get::Show-Upgraded "false";' >> /etc/apt/apt.conf.d/80-retries
+
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
     git \
@@ -44,6 +52,11 @@ RUN update-binfmts --enable qemu-arm || true
 
 # Setup build environment
 WORKDIR /workspace
+
+# Set default parallel build options (Docker Desktop typically limits to 12 CPUs)
+ENV MAKEFLAGS="-j12"
+ENV DEB_BUILD_OPTIONS="parallel=12"
+ENV NPROC=12
 
 # Entry point
 ENTRYPOINT ["/bin/bash"]

@@ -1,0 +1,39 @@
+# Docker Compose configuration for systemd testing and boot profiling
+# Used to test systemd configurations before building full image
+
+services:
+  systemd-tester:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-systemd
+    container_name: systemd-tester
+    platform: linux/amd64
+    volumes:
+      - "/Users/andrevollmer/moodeaudio-cursor/custom-components:/workspace/custom-components:ro"
+      - "/Users/andrevollmer/moodeaudio-cursor/moode-source:/workspace/moode-source:ro"
+      - "/Users/andrevollmer/moodeaudio-cursor/tools/test:/workspace/tools/test:ro"
+      - test-results:/workspace/test-results
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - TZ=UTC
+    stdin_open: true
+    tty: true
+    privileged: true
+    # Required for systemd to run properly
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+      - SYS_RESOURCE
+    # Required for systemd
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+    # Prevent systemd from trying to access host's systemd
+    security_opt:
+      - seccomp:unconfined
+    # Network mode for testing
+    network_mode: bridge
+
+volumes:
+  test-results:

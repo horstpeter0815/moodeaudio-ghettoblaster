@@ -1,0 +1,32 @@
+description: Quick Convolution Template
+devices:
+  samplerate: 44100
+  chunksize: 4096
+  queuelimit: 1
+  capture:
+    type: Alsa
+    channels: 2
+    device: hw:Loopback,1,0
+    format: S24LE
+  playback:
+    type: Alsa
+    channels: 2
+    device: _peppyout
+    format: S24LE
+  volume_ramp_time: 150
+filters: {}
+mixers:
+  stereo:
+    channels:
+      in: 2
+      out: 2
+    mapping:
+    - dest: 0
+      sources:
+      - channel: 0
+    - dest: 1
+      sources:
+      - channel: 1
+pipeline:
+- type: Mixer
+  name: stereo

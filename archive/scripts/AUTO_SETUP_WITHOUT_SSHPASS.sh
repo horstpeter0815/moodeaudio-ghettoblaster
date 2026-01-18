@@ -4,7 +4,7 @@
 SERIAL_PORT="/dev/cu.usbmodem214302"
 PI_IP="192.168.178.143"
 PI_USER="andre"
-PI_PASSWORD="4512"
+PI_PASSWORD=""
 
 echo "═══════════════════════════════════════════════════════════"
 echo "🤖 AUTO DEBUGGER SETUP (OHNE SSHPASS)"

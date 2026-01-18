@@ -46,15 +46,6 @@ secrets
 test-password.txt
 work/
 
-# Cursor internal config (may contain machine-specific paths, tokens, MCP config)
-.cursor/
-!.cursor/plans/
-!.cursor/plans/**
-
-# Local machine / environment specific config
-.pi4_ip
-.pi_ip
-
 # Large files - excluded from git
 kernel-build/
 drivers-repos/

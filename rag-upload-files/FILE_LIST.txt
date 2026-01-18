@@ -188,6 +188,9 @@
 ./v1.0-docs/v1.0_cleanup_status.md
 ./v1.0-docs/v1.0_config_inventory.md
 ./v1.0-docs/v1.0_display_audio_setup.md
+./v1.0-docs/v1.0_network_configuration.md
+./v1.0-docs/v1.0_room_correction_wizard.md
+./v1.0-docs/v1.0_system_status.md
 ./web-interface/apl-config.php
 ./web-interface/audioinfo.php
 ./web-interface/bkp-config.php

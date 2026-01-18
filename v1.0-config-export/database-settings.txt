@@ -1,0 +1,11 @@
+adevname|HiFiBerry AMP100
+alsa_output_mode|plughw
+camilladsp|bose_wave_filters.yml
+cardnum|1
+snd_rpi_hifiberry_dacplus
+cdsp_fix_playback|Yes
+hdmi_scn_orient|portrait
+i2sdevice|HiFiBerry AMP100
+local_display|1
+peppy_display|0
+peppy_display_type|meter

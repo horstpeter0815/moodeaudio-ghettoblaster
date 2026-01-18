@@ -1,6 +1,6 @@
 #!/bin/bash
 # Burn latest build image to SD card
-# Uses password 4512 for sudo
+# Uses password  for sudo
 
 set -e
 
@@ -76,7 +76,7 @@ echo "   This will take 5-10 minutes..."
 echo ""
 
 # Use sudo with password
-echo "4512" | sudo -S dd if="$LATEST_IMG" of="/dev/r$SD_DEVICE" bs=1m status=progress
+echo "" | sudo -S dd if="$LATEST_IMG" of="/dev/r$SD_DEVICE" bs=1m status=progress
 
 if [ $? -eq 0 ]; then
     echo ""

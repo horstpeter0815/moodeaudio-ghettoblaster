@@ -1,0 +1,105 @@
+/dts-v1/;
+/plugin/;
+
+// Unified Ghettoblaster Overlay for Raspberry Pi 5
+// Combines: HiFiBerry AMP100 + FT6236 Touch + Optimizations
+//
+// Hardware:
+// - HiFiBerry AMP100 (PCM5122 DAC at I2C 0x4d)
+// - FT6236 Touch Controller (I2C 0x38)
+// - Waveshare 7.9" 400x1280 Display
+//
+// Features:
+// - Auto-mute on AMP100
+// - Stable I2C clock (100kHz)
+// - Touch with correct orientation
+// - No reset-gpio conflicts
+
+/ {
+    compatible = "brcm,bcm2712";
+
+    // Fragment 0: Clock generator for PCM5122
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            dacpro_osc: dacpro_osc {
+                compatible = "hifiberry,dacpro-clk";
+                #clock-cells = <0>;
+            };
+        };
+    };
+
+    // Fragment 1: Enable I2S controller (Pi 5 specific)
+    fragment@1 {
+        target-path = "/axi/pcie@1000120000/rp1/i2s@a4000";
+        __overlay__ {
+            status = "okay";
+        };
+    };
+
+    // Fragment 2: I2C1 configuration (stable clock + devices)
+    fragment@2 {
+        target = <&i2c1>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            status = "okay";
+            clock-frequency = <100000>; // 100kHz for stability
+
+            // PCM5122 DAC (HiFiBerry AMP100)
+            pcm5122@4d {
+                #sound-dai-cells = <0>;
+                compatible = "ti,pcm5122";
+                reg = <0x4d>;
+                clocks = <&dacpro_osc>;
+                AVDD-supply = <&vdd_3v3_reg>;
+                DVDD-supply = <&vdd_3v3_reg>;
+                CPVDD-supply = <&vdd_3v3_reg>;
+                status = "okay";
+            };
+
+            // FT6236 Touch Controller
+            ft6236@38 {
+                compatible = "focaltech,ft6236";
+                reg = <0x38>;
+                interrupt-parent = <&gpio>;
+                interrupts = <25 2>; // GPIO 25, falling edge
+                touchscreen-size-x = <1280>;
+                touchscreen-size-y = <400>;
+                touchscreen-inverted-x;
+                touchscreen-inverted-y;
+                touchscreen-swapped-x-y;
+                status = "okay";
+            };
+        };
+    };
+
+    // Fragment 3: Sound card definition
+    fragment@3 {
+        target-path = "/axi";
+        __overlay__ {
+            sound {
+                compatible = "hifiberry,hifiberry-dacplus";
+                i2s-controller = <&i2s>;
+                status = "okay";
+                // No reset-gpio - causes conflicts with touch
+                // Auto-mute controlled via parameter below
+            };
+        };
+    };
+
+    // Override parameters (can be set in config.txt)
+    __overrides__ {
+        // Enable auto-mute: dtoverlay=ghettoblaster,auto_mute
+        auto_mute = <&sound>,"hifiberry-dacplus,auto_mute?";
+        
+        // 24dB digital gain: dtoverlay=ghettoblaster,24db_digital_gain
+        24db_digital_gain = <&sound>,"hifiberry,24db_digital_gain?";
+        
+        // Disable LEDs: dtoverlay=ghettoblaster,leds_off
+        leds_off = <&sound>,"hifiberry-dacplus,leds_off?";
+        
+        // External mute control: dtoverlay=ghettoblaster,mute_ext_ctl=<gpio>
+        mute_ext_ctl = <&sound>,"hifiberry-dacplus,mute_ext_ctl:0";
+    };
+};

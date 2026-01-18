@@ -1,0 +1,13 @@
+[Unit]
+Description=moOde DB smoke test (invariants: _audioout + plughw + non-HDMI adevname)
+After=local-fs.target
+Wants=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/moode-db-smoketest.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

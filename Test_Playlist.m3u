@@ -1,9 +1,0 @@
-#EXTM3U
-#EXTINF:-1,Test Playlist for moOde
-# This is a test playlist you can use in moOde Audio
-# 
-# To add music files, edit this file and add paths like:
-# /var/lib/mpd/music/YourSong.mp3
-# /var/lib/mpd/music/AnotherSong.flac
-#
-# Or use moOde web interface to add songs
