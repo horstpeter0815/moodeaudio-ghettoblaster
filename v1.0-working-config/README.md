@@ -118,3 +118,34 @@ avahi-browse -t _airplay._tcp       # Should show "Ghettoblaster"
 ```
 
 **This fix is now part of v1.0 configuration.**
+
+## UPDATE 2026-01-18 - WiFi and AirPlay Complete
+
+**WiFi Connection Fixed:**
+- Network: NAM YANG 2
+- IP: 192.168.1.159 (WiFi), 192.168.2.3 (Ethernet)
+- Command used:
+```bash
+sudo nmcli con add type wifi con-name "NamYang" ifname wlan0 ssid "NAM YANG 2"
+sudo nmcli con modify "NamYang" wifi-sec.key-mgmt wpa-psk
+sudo nmcli con modify "NamYang" wifi-sec.psk "PASSWORD"
+sudo nmcli con up "NamYang"
+```
+
+**AirPlay Audio Device Fixed:**
+- Problem: shairport-sync was trying to use card 0 (doesn't exist)
+- Fix: Set `output_device = "plughw:1,0";` in `/etc/shairport-sync.conf`
+- Status: ✅ Working - AirPlay connects and plays audio
+
+**Current Status:**
+- ✅ Boot: 6.7s (optimized)
+- ✅ Audio: HiFiBerry AMP100 working
+- ✅ Display: 1280x400 landscape, touch working
+- ✅ Network: WiFi + Ethernet both connected
+- ✅ AirPlay: Working on WiFi network
+- ✅ CamillaDSP: Bose Wave filters ready
+- ⏳ PeppyMeter: Not yet configured (NEXT TASK)
+
+**What's Left:**
+1. PeppyMeter configuration
+2. Room correction wizard
