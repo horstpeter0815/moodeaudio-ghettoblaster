@@ -97,3 +97,24 @@ This configuration is VERIFIED WORKING. If you need to make changes:
 4. Always have a way to restore v1.0
 
 **This is the baseline. Everything should be compared against this.**
+
+## UPDATE 2026-01-18 - AirPlay Fix
+
+**Issue:** AirPlay (shairport-sync) was not starting on boot, even though database showed `airplaysvc=1`.
+
+**Root Cause:** Service was disabled in systemd.
+
+**Fix:**
+```bash
+ssh andre@192.168.2.3
+sudo systemctl enable shairport-sync
+sudo systemctl start shairport-sync
+```
+
+**Verify:**
+```bash
+systemctl is-active shairport-sync  # Should show "active"
+avahi-browse -t _airplay._tcp       # Should show "Ghettoblaster"
+```
+
+**This fix is now part of v1.0 configuration.**
