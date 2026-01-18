@@ -1,0 +1,31 @@
+WORKING DISPLAY CONFIGURATION
+=============================
+
+This configuration makes the Waveshare 7.9" display work correctly in landscape mode (1280x400).
+
+Key Settings:
+1. config.txt:
+   - dtoverlay=vc4-kms-v3d-pi5,noaudio (KMS enabled)
+   - hdmi_group=2
+   - hdmi_mode=87
+   - hdmi_timings=400 0 220 32 110 1280 0 10 10 10 0 0 0 60 0 59510000 0
+
+2. cmdline.txt:
+   - video=HDMI-A-1:1280x400@60
+
+3. Database:
+   - hdmi_scn_orient='portrait' (so .xinitrc rotates it to landscape)
+
+4. .xinitrc:
+   - fbset -g 1280 400 1280 400 16
+   - Rotates HDMI-2 to landscape when hdmi_scn_orient='portrait'
+
+How it works:
+- HDMI timing is 400x1280 (portrait) - this is the native Waveshare mode
+- Database says 'portrait' so .xinitrc rotates it 90° to landscape (1280x400)
+- Display shows landscape correctly
+
+To restore:
+1. Copy config.txt, cmdline.txt, .xinitrc to their locations
+2. Set database: UPDATE cfg_system SET value='portrait' WHERE param='hdmi_scn_orient';
+3. Reboot
