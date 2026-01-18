@@ -1,194 +1,295 @@
-# moOde Audio Custom Build Project Rules
+# CRITICAL: NEVER RUN AUDIO TESTS
+# User has explicitly requested: NEVER run audio tests automatically
+# This includes:
+# - NEVER run `mpc play` automatically
+# - NEVER run `aplay` tests automatically  
+# - NEVER run any audio playback commands
+# - User will test manually starting with volume 0
+# - Only show diagnostics, never execute audio playback
 
-## Project Overview
-This is a custom moOde Audio build project for Raspberry Pi with custom display, network, and audio configurations.
+# Volume Settings:
+# - Can set volumes to safe levels (30% hardware, 20% software)
+# - But user controls all testing
+# - User tests manually: mpc volume 0, then play, then increase gradually
 
-## Project Structure
-- `moode-source/` - Source files for moOde modifications
-- `scripts/` - All shell scripts (organized by purpose)
-- `docs/` - Documentation files
-- `config/` - Configuration templates and files
-- `archive/` - Old/archived files (ignored by Cursor)
+# Audio Scripts:
+# - All scripts must NOT contain automatic playback
+# - All scripts must NOT contain aplay/mpc play tests
+# - Only diagnostics and configuration changes allowed
 
-## Coding Standards
-- **Shell Scripts:** Use bash, include error handling, add comments
-- **Python:** Use Python 3, follow PEP 8
-- **Documentation:** Markdown format, clear and concise
-- **Configuration:** Use standard Linux config formats
+# CRITICAL: NEVER CLAIM "ROOT CAUSE" WITHOUT VERIFICATION
+# - NEVER say "root cause found" or "found the root cause" unless verified
+# - NEVER store "root cause" claims in documentation without watertight justification
+# - Only say "fixed X" or "changed Y" - let user verify if it actually fixes the problem
+# - Be humble: make changes, document what was changed, wait for verification
+# - This is why previous fixes didn't work - claiming root cause without proof
 
-## Key Directories
-- `/moode-source/lib/systemd/system/` - Systemd service files
-- `/moode-source/boot/firmware/` - Boot configuration (config.txt, cmdline.txt)
-- `/moode-source/www/` - moOde web interface files
-- `/moode-source/usr/local/bin/` - Custom scripts on Pi
+# CRITICAL: PATH RESOLUTION AND COMMAND-LINE CONTEXT
+# This rule prevents recurring "No such file or directory" errors
+# Root cause: Not understanding working directory context and path resolution
 
-## Important System Details
-- **SSH User:** andre (UID 1000, GID 1000)
-- **Default Password:** 0815
-- **Display:** Waveshare 7.9" HDMI (400x1280 portrait, rotated to 1280x400 landscape)
-- **Audio:** HiFiBerry AMP100
-- **Network:** Ethernet (192.168.10.2) or WiFi access point
+# MANDATORY: Before giving ANY command-line instruction:
+# 1. ALWAYS use ABSOLUTE paths OR explicitly state the working directory
+# 2. ALWAYS verify file/directory existence using read_file or list_dir BEFORE referencing
+# 3. ALWAYS understand the workspace structure:
+#    - Workspace root: /Users/andrevollmer/moodeaudio-cursor
+#    - SD card mount: /Volumes/rootfs (when mounted)
+#    - Tools directory: /Users/andrevollmer/moodeaudio-cursor/tools
+#    - Scripts directory: /Users/andrevollmer/moodeaudio-cursor/scripts
+# 4. NEVER assume current working directory - always specify it explicitly
+# 5. NEVER use relative paths without first checking where the command will run
+# 6. When creating scripts, use absolute paths or determine workspace root dynamically
 
-## Working Configurations
-- **Display:** See `DISPLAY_CONFIG_WORKING.md`
-- **Network:** See network configuration scripts
-- **Services:** See `moode-source/lib/systemd/system/`
+# Examples of WRONG (what causes failures):
+# ❌ "cd tools/fix && ./script.sh" - assumes current directory
+# ❌ "bash script.sh" - doesn't specify path
+# ❌ "cat file.txt" - relative path, unknown context
+# ❌ "ls -la tools/" - assumes workspace root
 
-## Build System
-- **Custom Builds:** Primary development path using `imgbuild/pi-gen-64/`
-  - Use `tools/build.sh` for build management
-  - Builds include all customizations from the start
-  - Test with Docker test suite before deployment
-- **moOde Downloads:** Reference and quick fixes
-  - Store in `downloads/` directory
-  - Apply fixes with `INSTALL_FIXES_AFTER_FLASH.sh`
-  - Use for comparison and quick testing
+# Examples of CORRECT:
+# ✅ "cd /Users/andrevollmer/moodeaudio-cursor/tools/fix && bash script.sh"
+# ✅ "bash /Users/andrevollmer/moodeaudio-cursor/tools/fix/script.sh"
+# ✅ "cat /Users/andrevollmer/moodeaudio-cursor/file.txt"
+# ✅ "ls -la /Users/andrevollmer/moodeaudio-cursor/tools/"
 
-## Deployment Process
-1. **Custom Build:** Use `tools/build.sh --deploy`
-2. **moOde Download:** Flash image, then apply fixes
-3. Mount SD card (rootfs and bootfs) if needed
-4. Copy files to appropriate locations
-5. Set permissions (sudo required)
-6. Eject and boot Pi
-7. Test connection and functionality
+# When providing commands to user:
+# - ALWAYS include full absolute path OR explicit "cd" to set context
+# - ALWAYS verify the file exists first using read_file or list_dir
+# - ALWAYS check if directories exist before referencing
+# - If path might not exist, use conditional checks: "if [ -f /path ]; then ..."
 
-## Testing
-- Always test on SD card before final deployment
-- Backup working configurations before changes
-- Use Docker for testing when possible
-- **Docker Test Suite:** Comprehensive test suite with multiple simulation modes
-  - `complete_test_suite.sh` - Main test suite (works with/without Docker)
-  - `START_COMPLETE_SIMULATION.sh` - Complete boot simulation
-  - `START_SYSTEM_SIMULATION_SIMPLE.sh` - System simulation
-  - `test-image-in-container.sh` - Image testing
-  - Use `./tools/test.sh --docker` for Docker simulations
-  - Use `./tools/test.sh --image` for image testing
+# For scripts that need workspace root:
+# - Use: WORKSPACE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# - Or: WORKSPACE_ROOT="/Users/andrevollmer/moodeaudio-cursor"
+# - Then reference: "$WORKSPACE_ROOT/tools/fix/script.sh"
 
-## File Naming Conventions
-- **Toolbox scripts:** `tools/[category].sh` (e.g., `tools/fix.sh`, `tools/build.sh`)
-- **Organized scripts:** `scripts/[category]/ACTION_DESCRIPTION.sh` (e.g., `scripts/network/SETUP_WIFI.sh`)
-- **Archive scripts:** `archive/scripts/YYYY-MM-DD_SCRIPT_NAME.sh` (e.g., `archive/scripts/2026-01-07_FIX_NETWORK.sh`)
-- **Root scripts:** Only toolbox launchers or legacy scripts (avoid creating new ones)
-- **Documentation:** `TOPIC_DESCRIPTION.md` (e.g., `DISPLAY_CONFIG_WORKING.md`)
-- **Services:** Use chronological order (00-, 01-, 02-) or functional names
-  - **NEVER use status-descriptive names** like "bulletproof", "guaranteed", "complete", "minimal", "direct"
-  - Use functional names: `ssh-enable.service`, `eth0-configure.service`, `network-configure.service`
-  - Or chronological: `00-boot-network-ssh.service`, `01-ssh-enable.service`, `02-eth0-configure.service`
+# For SD card operations:
+# - ALWAYS check: if [ ! -d "/Volumes/rootfs" ]; then echo "SD not mounted"; exit 1; fi
+# - ALWAYS use: /Volumes/rootfs/etc/systemd/system/... (absolute path)
 
-## Toolbox System - CRITICAL: USE TOOLBOX FIRST
+# This prevents the recurring pattern:
+# - User runs command from unknown directory
+# - Relative paths fail: "No such file or directory"
+# - Dependencies break because paths are wrong
+# - Same mistake repeated because context wasn't verified
 
-**ALWAYS use toolbox tools when available. DO NOT create new scripts in root directory.**
+# CRITICAL: GITHUB REPOSITORY INTEGRATION INTO WORKFLOWS
+# Repository: https://github.com/horstpeter0815/moodeaudio-ghettoblaster.git
+# This rule prevents repeatedly applying fixes when working configurations exist in GitHub
 
-### Toolbox Tools (Use These First):
-- **Main Tool:** `tools/toolbox.sh` - Interactive menu launcher
-- **Build/Deploy:** `tools/build.sh` - Build and deployment management
-- **Fixes:** `tools/fix.sh` - System fixes and configuration
-- **Testing:** `tools/test.sh` - Testing and validation
-- **Monitoring:** `tools/monitor.sh` - Monitoring and status checking
-- **Version:** `tools/version.sh` - Version management
-- **AI/RAG:** `tools/ai.sh` - GhettoAI knowledge base management (--status, --upload, --manifest)
+# MANDATORY: Before applying ANY fix or configuration change:
+# 1. ALWAYS check GitHub for working configurations FIRST
+#    - Search for commits with "working", "v1.0", "complete", "tested" in message
+#    - Check for tags like "v1.0-working", "stable", "tested"
+#    - Look in backups/ directories for working configs
+# 2. ALWAYS prefer restoring from GitHub over applying new fixes
+#    - If a working configuration exists in GitHub, RESTORE it, don't fix
+#    - Use: git show <commit>:<path> to extract working files
+#    - Example: git show 84aa8c2:backups/v1.0-2026-01-08/cmdline.txt
+# 3. ALWAYS tag working versions in GitHub
+#    - After confirming a working system: git tag v1.0-working
+#    - Tag with descriptive names: v1.0-stable, v1.0-tested, etc.
+#    - Push tags: git push origin --tags
+# 4. ALWAYS reference GitHub commits when restoring
+#    - Document which commit/tag was used: "Restored from commit 84aa8c2"
+#    - Include commit hash in restore scripts
+#    - Verify commit exists: git show <commit> --stat
+# 5. ALWAYS store working configurations in GitHub
+#    - Don't just store locally - commit working configs to GitHub
+#    - Use backups/ directory structure: backups/v1.0-YYYY-MM-DD/
+#    - Include: cmdline.txt, config.txt, .xinitrc, service configs, etc.
 
-### Toolbox-First Policy:
-1. **Before creating any script:** Check if toolbox has this function
-2. **Before running any script:** Check if toolbox can do this
-3. **When user asks for script:** Suggest toolbox first, then organized scripts
-4. **When toolbox missing function:** Add to toolbox, don't create root script
+# Examples of WRONG (what causes repeated fixes):
+# ❌ "Let me apply a fix to the SD card" - without checking GitHub first
+# ❌ "I'll create a new configuration" - when working one exists in GitHub
+# ❌ "Applying fixes to resolve issue" - should restore working config instead
+# ❌ Storing working configs only locally - not in GitHub
 
-### When to Use Toolbox:
-- ✅ Building images → `cd ~/moodeaudio-cursor && ./tools/build.sh --build`
-- ✅ Fixing issues → `cd ~/moodeaudio-cursor && ./tools/fix.sh --[component]`
-- ✅ Testing systems → `cd ~/moodeaudio-cursor && ./tools/test.sh --[component]`
-- ✅ Monitoring status → `cd ~/moodeaudio-cursor && ./tools/monitor.sh --[component]`
-- ✅ Deploying → `cd ~/moodeaudio-cursor && ./tools/build.sh --deploy`
-- ✅ Interactive menu → `cd ~/moodeaudio-cursor && ./tools/toolbox.sh`
+# Examples of CORRECT:
+# ✅ "Checking GitHub for working v1.0 configuration..." (then restore from commit)
+# ✅ "Found working config in commit 84aa8c2, restoring..." (use git show)
+# ✅ "Tagging this working version as v1.0-stable" (after verification)
+# ✅ "Restored from GitHub commit 84aa8c2:backups/v1.0-2026-01-08/cmdline.txt"
 
-### Script Organization Rules:
-1. **NEVER create scripts in root** (except toolbox launchers)
-2. **ALWAYS check toolbox first** before creating new script
-3. **ORGANIZE scripts** into appropriate directories:
-   - Network scripts → `scripts/network/` or use `tools/fix.sh --network`
-   - Build scripts → `tools/build/` or use `tools/build.sh`
-   - Fix scripts → `tools/fix/` or use `tools/fix.sh`
-   - Test scripts → `tools/test/` or use `tools/test.sh`
-   - Deployment → `scripts/deployment/` or use `tools/build.sh --deploy`
-   - Setup → `scripts/setup/` or use `tools/fix.sh --setup`
-4. **ARCHIVE old scripts** to `archive/scripts/` with date prefix (YYYY-MM-DD_SCRIPT_NAME.sh)
+# GitHub Workflow:
+# 1. User reports issue
+# 2. Check GitHub: git log --all --grep="working\|v1.0\|tested" --oneline
+# 3. If working config found: git show <commit>:<path> and restore
+# 4. If no working config: Apply fix, then commit and tag as working
+# 5. Document: "Working configuration stored in GitHub commit <hash>"
 
-### Common Tasks
-- **Setup:** Use `tools/fix.sh --setup` or scripts in `scripts/setup/`
-- **Deployment:** Use `tools/build.sh --deploy` or scripts in `scripts/deployment/`
-- **Fixes:** Use `tools/fix.sh --[component]` or scripts in `scripts/fixes/`
-- **Testing:** Use `tools/test.sh --[component]` for all tests
-- **Monitoring:** Use `tools/monitor.sh --[component]` for status checks
-- **Documentation:** Files in `docs/`
+# This prevents the recurring pattern:
+# - Apply fix → doesn't work → apply another fix → still doesn't work
+# - Repeat 20+ times for same issue
+# - User: "We had a working system, why can't you restore it?"
+# - Solution: Check GitHub FIRST, restore working config, don't fix
 
-## GhettoAI Knowledge Base Maintenance
+# CRITICAL: DISPLAY ORIENTATION - BOOT SCREEN AND MOODE SCREEN
+# This rule prevents repeatedly breaking display orientation that was working
 
-The project has a local AI assistant (GhettoAI) powered by Open WebUI + Ollama with RAG.
+# MANDATORY: For 1280x400 landscape display orientation:
+# 1. BOOT SCREEN (early boot, before X11):
+#    - /boot/firmware/cmdline.txt: MUST have `video=HDMI-A-1:1280x400@60`
+#    - /boot/firmware/config.txt: MUST have:
+#      * hdmi_group=2
+#      * hdmi_mode=87
+#      * hdmi_timings=400 0 220 32 110 1280 0 10 10 10 0 0 0 60 0 59510000 0
+#    - These settings control the framebuffer resolution during boot
+# 2. MOODE SCREEN (after X11 starts):
+#    - Database: /var/local/www/db/moode-sqlite3.db
+#      * cfg_system.hdmi_scn_orient = 'landscape'
+#    - /home/andre/.xinitrc: Uses moOde default (reads from database via moodeutl)
+#    - The .xinitrc reads HDMI_SCN_ORIENT from database and applies rotation via xrandr
+# 3. NEVER change .xinitrc manually - use moOde default that reads from database
+# 4. NEVER remove video parameter from cmdline.txt
+# 5. NEVER remove hdmi_group/hdmi_mode/hdmi_timings from config.txt
 
-### When to Refresh the Knowledge Base:
-- **After editing files in `rag-upload-files/`** (configs, docs, scripts, source code)
-- **After adding new documentation** to `docs/`
-- **After completing major features** that change how the system works
-- **When the agent gives outdated answers** about display/network/audio config
+# Examples of WRONG (what causes failures):
+# ❌ Removing video parameter from cmdline.txt
+# ❌ Changing hdmi_group or hdmi_mode without understanding
+# ❌ Manually editing .xinitrc instead of using moOde default
+# ❌ Setting hdmi_scn_orient to 'portrait' when display should be landscape
 
-### How to Check/Refresh:
-```bash
-# Check if refresh is needed:
-cd ~/moodeaudio-cursor && ./tools/ai.sh --status
+# Examples of CORRECT:
+# ✅ cmdline.txt: video=HDMI-A-1:1280x400@60
+# ✅ config.txt: hdmi_group=2, hdmi_mode=87, correct hdmi_timings
+# ✅ Database: hdmi_scn_orient='landscape'
+# ✅ .xinitrc: moOde default (uses moodeutl to read database)
 
-# Refresh the KB (needs token from Open WebUI):
-cd ~/moodeaudio-cursor && OPENWEBUI_TOKEN='<token>' ./tools/ai.sh --upload
-```
+# This prevents the recurring pattern:
+# - Boot screen wrong orientation → fix cmdline.txt → moOde screen wrong → fix .xinitrc
+# - Repeat fixes without understanding both boot and runtime orientation
+# - Solution: Fix BOTH boot screen (cmdline.txt + config.txt) AND moOde screen (database + .xinitrc)
 
-### Getting the Token:
-1. Open http://localhost:3000 in browser
-2. Open DevTools → Console
-3. Run: `localStorage.token`
-4. Copy the value (starts with `eyJ...`)
+# CRITICAL: HOW cmdline.txt video PARAMETER AND .xinitrc WORK TOGETHER
+# This is a critical learning that must be understood and preserved
 
-### Trigger Keywords (reminder to check KB status):
-When the user mentions: "GhettoAI", "knowledge base", "RAG", "train", "training", "AI assistant"
-→ Consider running `./tools/ai.sh --status` to check if refresh is needed.
+# THE RELATIONSHIP:
+# 1. cmdline.txt video parameter: Sets the FRAMEBUFFER resolution during boot (before X11 starts)
+#    - Format: video=HDMI-A-1:1280x400@60
+#    - This is the PHYSICAL resolution the framebuffer uses
+#    - This appears during boot, before moOde UI loads
+#    - This is what you see during the boot process
+#
+# 2. .xinitrc: Reads from moOde database and applies X11 rotation AFTER X server starts
+#    - Reads: HDMI_SCN_ORIENT=$(moodeutl -q "SELECT value FROM cfg_system WHERE param='hdmi_scn_orient'")
+#    - Applies: xrandr --output HDMI-2 --rotate left (if portrait) or normal (if landscape)
+#    - This is what you see AFTER boot, when moOde UI is running
+#
+# 3. HOW THEY WORK TOGETHER:
+#    - cmdline.txt video parameter sets the BASE resolution (1280x400 landscape)
+#    - .xinitrc reads the database setting and applies rotation if needed
+#    - If database says "portrait", .xinitrc rotates the 1280x400 to portrait (400x1280)
+#    - If database says "landscape", .xinitrc keeps it as 1280x400 landscape
+#    - The video parameter in cmdline.txt should ALWAYS be 1280x400@60 (the physical display size)
+#    - The .xinitrc then rotates it based on what the database says
+#
+# 4. CRITICAL UNDERSTANDING:
+#    - cmdline.txt video parameter = PHYSICAL display resolution (always 1280x400)
+#    - .xinitrc rotation = LOGICAL orientation (landscape or portrait based on database)
+#    - They work TOGETHER: cmdline sets the base, .xinitrc rotates it
+#    - NEVER change cmdline.txt video to match rotation - it should always be 1280x400
+#    - ALWAYS change database hdmi_scn_orient to control rotation, .xinitrc reads it
+#
+# Examples of WRONG (what causes failures):
+# ❌ Setting cmdline.txt video to 400x1280 to match portrait - WRONG, breaks boot screen
+# ❌ Manually editing .xinitrc rotation without updating database - WRONG, gets overwritten
+# ❌ Changing cmdline.txt video parameter when you want to change orientation - WRONG
+#
+# Examples of CORRECT:
+# ✅ cmdline.txt: video=HDMI-A-1:1280x400@60 (always this, never change)
+# ✅ Database: hdmi_scn_orient='landscape' (for landscape) or 'portrait' (for portrait)
+# ✅ .xinitrc: Uses moOde default that reads from database (never manually edit rotation)
+# ✅ To change orientation: Update database, .xinitrc will read it automatically
+#
+# This prevents the recurring pattern:
+# - Change cmdline.txt video → boot screen wrong → change back → moOde screen wrong
+# - Manually edit .xinitrc → gets overwritten → doesn't work
+# - Solution: cmdline.txt video = always 1280x400, database controls rotation via .xinitrc
 
-## Notes
-- Always use sudo for system file modifications
-- Backup before major changes
-- Test incrementally
-- Document all changes
+# CRITICAL: CONFIG.TXT MANDATORY SETTINGS - ALWAYS APPLY THESE
+# These settings must ALWAYS be present in /boot/firmware/config.txt
+# User has manually edited config.txt and these are the required settings
 
-## Command Guidelines - CRITICAL
-- **ALWAYS provide commands that work from home directory (~/)**
-- **NEVER assume user is in project directory**
-- **EVERY terminal command must include full path or cd command**
+# MANDATORY: Always ensure these settings exist in config.txt:
+# 1. arm_boost=1
+#    - Must always be enabled for performance
+# 2. dtparam=audio=off
+#    - Must always disable onboard audio (we use HiFiBerry AMP100)
+# 3. dtoverlay=vc4-kms-v3d-pi5,noaudio
+#    - KMS enabled with noaudio (onboard audio disabled)
+# 4. hdmi_force_edid_audio=0
+#    - Disable HDMI audio (we use HiFiBerry)
 
-### Required Format:
-1. **Option 1 - Full path:**
-   ```bash
-   ~/moodeaudio-cursor/script.sh
-   # or
-   $HOME/moodeaudio-cursor/script.sh
-   ```
+# MANDATORY: When modifying config.txt:
+# 1. ALWAYS preserve: arm_boost=1
+# 2. ALWAYS preserve: dtparam=audio=off
+# 3. ALWAYS preserve: dtoverlay=vc4-kms-v3d-pi5,noaudio
+# 4. ALWAYS preserve: hdmi_force_edid_audio=0
+# 5. NEVER remove or comment out these settings
+# 6. If duplicates exist, remove duplicates but keep the setting
 
-2. **Option 2 - cd first (PREFERRED):**
-   ```bash
-   cd ~/moodeaudio-cursor && ./script.sh
-   ```
+# Examples of WRONG:
+# ❌ Removing arm_boost=1
+# ❌ Setting dtparam=audio=on
+# ❌ Removing dtparam=audio=off
+# ❌ Commenting out dtoverlay=vc4-kms-v3d-pi5,noaudio
 
-3. **Option 3 - One-liner with cd:**
-   ```bash
-   cd ~/moodeaudio-cursor && command
-   ```
+# Examples of CORRECT:
+# ✅ Always have: arm_boost=1
+# ✅ Always have: dtparam=audio=off
+# ✅ Always have: dtoverlay=vc4-kms-v3d-pi5,noaudio
+# ✅ Always have: hdmi_force_edid_audio=0
+# ✅ Remove duplicates but keep the setting active
 
-### Examples:
-- ✅ CORRECT: `cd ~/moodeaudio-cursor && ./tools/build.sh`
-- ✅ CORRECT: `~/moodeaudio-cursor/tools/build.sh`
-- ❌ WRONG: `./tools/build.sh` (assumes current directory)
-- ❌ WRONG: `tools/build.sh` (assumes current directory)
+# This ensures the system always has:
+# - Performance boost enabled
+# - Onboard audio disabled (HiFiBerry AMP100 is the audio device)
+# - KMS enabled for display
+# - HDMI audio disabled
 
-### For run_terminal_cmd tool:
-- Always start with `cd ~/moodeaudio-cursor &&` or use full paths
-- Make all commands copy-paste ready from home directory
-- Never rely on current working directory
+# CRITICAL: MANDATORY CONFIG.TXT SETTINGS - ALWAYS PRESERVE
+# These settings must ALWAYS be present in /boot/firmware/config.txt
+# User has manually configured these and they must be maintained
 
+# MANDATORY settings that must ALWAYS be in config.txt:
+# 1. arm_boost=1
+#    - MUST always be set to 1
+#    - NEVER remove or comment this line
+#    - If missing, ALWAYS add: arm_boost=1
+#
+# 2. dtparam=audio=off
+#    - MUST always disable onboard audio
+#    - MUST be: dtparam=audio=off (not dtparam=audio=on or commented)
+#    - If missing or enabled, ALWAYS set: dtparam=audio=off
+#    - If duplicates exist, remove extras but keep ONE dtparam=audio=off
+#
+# 3. dtoverlay=vc4-kms-v3d-pi5,noaudio
+#    - KMS overlay with noaudio (disables audio in KMS)
+#    - Should be: dtoverlay=vc4-kms-v3d-pi5,noaudio
+#    - This works together with dtparam=audio=off to disable onboard sound
+
+# MANDATORY: Before any config.txt changes:
+# 1. ALWAYS verify arm_boost=1 exists
+# 2. ALWAYS verify dtparam=audio=off exists (exactly once)
+# 3. ALWAYS verify dtoverlay=vc4-kms-v3d-pi5,noaudio is present
+# 4. If any are missing or wrong, fix them BEFORE other changes
+# 5. After any changes, verify these settings still exist
+
+# Examples of WRONG:
+# ❌ Removing arm_boost=1 during cleanup
+# ❌ Setting dtparam=audio=on
+# ❌ Commenting out dtparam=audio=off
+# ❌ Having dtparam=audio=off multiple times (clean up duplicates)
+# ❌ Not checking these before making other changes
+
+# Examples of CORRECT:
+# ✅ Always verify arm_boost=1 before and after changes
+# ✅ Always verify dtparam=audio=off before and after changes
+# ✅ Remove duplicate dtparam=audio=off entries but keep one
+# ✅ If missing, add them immediately
+
+# This prevents the recurring pattern:
+# - Make changes → accidentally remove arm_boost → performance degrades
+# - Make changes → onboard audio gets enabled → conflicts with HiFiBerry
+# - Solution: ALWAYS preserve these mandatory settings
