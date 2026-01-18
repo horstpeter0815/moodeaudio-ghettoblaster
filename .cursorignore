@@ -53,6 +53,15 @@ secrets/
 *.token
 config.local.sh
 
+# Cursor internal config (may contain machine-specific paths, tokens, MCP config)
+.cursor/
+!.cursor/plans/
+!.cursor/plans/**
+
+# Local machine / environment specific config
+.pi4_ip
+.pi_ip
+
 # Keep important directories
 !moode-source/
 !scripts/

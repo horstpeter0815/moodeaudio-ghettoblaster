@@ -162,14 +162,38 @@ test_all() {
 test_docker_simulation() {
     log "Running Docker-based system simulation..."
     
-    if [ -f "$PROJECT_ROOT/START_COMPLETE_SIMULATION.sh" ]; then
-        bash "$PROJECT_ROOT/START_COMPLETE_SIMULATION.sh"
-    elif [ -f "$PROJECT_ROOT/START_SYSTEM_SIMULATION_SIMPLE.sh" ]; then
-        bash "$PROJECT_ROOT/START_SYSTEM_SIMULATION_SIMPLE.sh"
-    else
-        error "Docker simulation scripts not found"
+    # Ensure Docker daemon is running (Docker Desktop / colima / etc.)
+    if ! docker info >/dev/null 2>&1; then
+        error "Cannot connect to Docker daemon."
+        error "Start Docker Desktop (or your Docker daemon) and retry:"
+        error "  cd ~/moodeaudio-cursor && ./tools/test.sh --docker"
         exit 1
     fi
+
+    # Prefer docker-compose based simulator if present
+    if [ -f "$PROJECT_ROOT/docker-compose.complete-simulation.yml" ]; then
+        log "Using docker-compose.complete-simulation.yml"
+        log "Building + running simulator (this may take a few minutes on first run)..."
+        docker compose -f "$PROJECT_ROOT/docker-compose.complete-simulation.yml" up --build --abort-on-container-exit --remove-orphans
+        return 0
+    fi
+
+    # Fallback to legacy scripts if they exist
+    if [ -f "$PROJECT_ROOT/START_COMPLETE_SIMULATION.sh" ]; then
+        bash "$PROJECT_ROOT/START_COMPLETE_SIMULATION.sh"
+        return 0
+    fi
+    if [ -f "$PROJECT_ROOT/START_SYSTEM_SIMULATION_SIMPLE.sh" ]; then
+        bash "$PROJECT_ROOT/START_SYSTEM_SIMULATION_SIMPLE.sh"
+        return 0
+    fi
+
+    error "Docker simulation entrypoint not found"
+    error "Expected one of:"
+    error "  - docker-compose.complete-simulation.yml (preferred)"
+    error "  - START_COMPLETE_SIMULATION.sh"
+    error "  - START_SYSTEM_SIMULATION_SIMPLE.sh"
+    exit 1
 }
 
 test_image_in_docker() {
@@ -177,10 +201,12 @@ test_image_in_docker() {
     
     if [ -f "$PROJECT_ROOT/test-image-in-container.sh" ]; then
         bash "$PROJECT_ROOT/test-image-in-container.sh"
-    else
-        error "Image test script not found"
-        exit 1
+        return 0
     fi
+
+    warn "Image test script not found (test-image-in-container.sh)"
+    warn "Tip: Use docker simulation instead: ./tools/test.sh --docker"
+    exit 1
 }
 
 verify_all() {

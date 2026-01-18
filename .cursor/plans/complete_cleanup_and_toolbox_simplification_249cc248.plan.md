@@ -58,9 +58,7 @@ todos:
       - create-toolbox-launcher
 ---
 
-# Complete Clea
-
-nup and Toolbox Simplification
+# Complete Cleanup and Toolbox Simplification
 
 ## Phase 1: Image Cleanup
 

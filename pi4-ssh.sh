@@ -1,45 +1,50 @@
 #!/bin/bash
-# Effizientes SSH-Script für Pi 4 (moodepi4)
-# Verwendung: ./pi4-ssh.sh "command"
-# Oder: ./pi4-ssh.sh (interaktiv)
+# SSH helper for the active Pi (Pi 5 / moOde)
+# Usage:
+#   ./pi-ssh.sh "command"
+#   ./pi-ssh.sh (interactive)
 
-# Lade IP aus Datei oder verwende mDNS
-if [ -f .pi4_ip ]; then
-    PI4_IP=$(cat .pi4_ip)
+# Load IP from file if present; otherwise fall back to deterministic default.
+# (Project default is 192.168.10.2 for the Pi)
+if [ -f .pi_ip ]; then
+    PI_IP=$(cat .pi_ip)
+elif [ -f .pi4_ip ]; then
+    # Legacy filename kept for backwards compatibility (Pi 5 is in use)
+    PI_IP=$(cat .pi4_ip)
 else
-    PI4_IP=$(ping -c 1 -W 1000 "moodepi4.local" 2>/dev/null | grep -oE '\([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\)' | tr -d '()' | head -1)
+    PI_IP="192.168.10.2"
 fi
 
-if [ -z "$PI4_IP" ]; then
-    echo "❌ Pi 4 IP nicht gefunden. Bitte setup-pi4-ssh.sh ausführen oder IP manuell setzen."
+if [ -z "${PI_IP:-}" ]; then
+    echo "❌ Pi IP not found. Create a .pi_ip file or use the default 192.168.10.2."
     exit 1
 fi
 
-PI4_USER="andre"
+PI_USER="andre"
 SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=5"
 
 # Funktion: SSH-Befehl ausführen
 pi4_exec() {
-    ssh pi3 "$@"
+    ssh $SSH_OPTS "$PI_USER@$PI_IP" "$@"
 }
 
 # Funktion: Datei kopieren (local -> remote)
 pi4_copy() {
     local_file="$1"
     remote_file="$2"
-    scp $SSH_OPTS "$local_file" "$PI4_USER@$PI4_IP:$remote_file"
+    scp $SSH_OPTS "$local_file" "$PI_USER@$PI_IP:$remote_file"
 }
 
 # Funktion: Datei kopieren (remote -> local)
 pi4_pull() {
     remote_file="$1"
     local_file="$2"
-    scp $SSH_OPTS "$PI4_USER@$PI4_IP:$remote_file" "$local_file"
+    scp $SSH_OPTS "$PI_USER@$PI_IP:$remote_file" "$local_file"
 }
 
 # Funktion: Interaktive Shell
 pi4_shell() {
-    ssh pi3
+    ssh $SSH_OPTS "$PI_USER@$PI_IP"
 }
 
 # Hauptlogik
