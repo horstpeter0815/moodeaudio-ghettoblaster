@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Room Correction Wizard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { font-size: 24px; margin-bottom: 20px; text-align: center; }
+        .status { 
+            background: #2a2a2a; 
+            border-radius: 10px; 
+            padding: 15px; 
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .status.success { border-left: 4px solid #4CAF50; }
+        .status.error { border-left: 4px solid #f44336; }
+        button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button.primary {
+            background: #4CAF50;
+            color: white;
+        }
+        button.secondary {
+            background: #ff9800;
+            color: white;
+        }
+        button.danger {
+            background: #f44336;
+            color: white;
+        }
+        button.disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        button:active { transform: scale(0.98); }
+        canvas {
+            width: 100%;
+            height: 200px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .instruction {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .frequency-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .freq-band {
+            background: #2a2a2a;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .freq-band .freq { font-size: 11px; opacity: 0.7; }
+        .freq-band .value { font-size: 18px; font-weight: bold; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Room EQ Wizard</h1>
+        
+        <div id="status" class="status">
+            Ready to start measurement
+        </div>
+
+        <div class="instruction">
+            <strong>Instructions:</strong><br>
+            1. Set volume to comfortable level (50-60%)<br>
+            2. Position iPhone at listening position<br>
+            3. Allow microphone access<br>
+            4. Click Start Pink Noise<br>
+            5. Click Start Measurement<br>
+            6. System will auto-adjust EQ in real-time!
+        </div>
+
+        <button id="btnStartNoise" class="primary" onclick="startPinkNoise()">
+            Start Pink Noise on Pi
+        </button>
+
+        <button id="btnStartMeasure" class="secondary disabled" onclick="startMeasurement()" disabled>
+            Start Measurement (iPhone Mic)
+        </button>
+
+        <canvas id="spectrum" width="600" height="200"></canvas>
+
+        <div class="frequency-display" id="freqDisplay">
+            <!-- Frequency bands will appear here -->
+        </div>
+
+        <button id="btnApply" class="primary disabled" onclick="applyCorrection()" disabled>
+            Apply Correction
+        </button>
+
+        <button id="btnStop" class="danger" onclick="stopAll()">
+            Stop Everything
+        </button>
+    </div>
+
+    <script>
+        const PI_URL = 'http://192.168.2.3/command/room-correction-wizard.php';
+        let audioContext, analyzer, microphone;
+        let isPlaying = false;
+        let isMeasuring = false;
+        let measurementInterval;
+        let ambientNoise = null;
+        let frequencyData = [];
+
+        // Frequency bands (Hz) for parametric EQ
+        const FREQ_BANDS = [63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+
+        function updateStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+
+        async function startPinkNoise() {
+            updateStatus('Starting pink noise on Pi...', 'success');
+            try {
+                const response = await fetch(PI_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'cmd=start_pink_noise'
+                });
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    updateStatus('✅ Pink noise playing! Click "Start Measurement"', 'success');
+                    isPlaying = true;
+                    document.getElementById('btnStartNoise').classList.add('disabled');
+                    document.getElementById('btnStartNoise').disabled = true;
+                    document.getElementById('btnStartMeasure').classList.remove('disabled');
+                    document.getElementById('btnStartMeasure').disabled = false;
+                } else {
+                    updateStatus('❌ Error: ' + data.message, 'error');
+                }
+            } catch (error) {
+                updateStatus('❌ Connection error: ' + error.message, 'error');
+            }
+        }
+
+        async function startMeasurement() {
+            if (!isPlaying) {
+                updateStatus('❌ Start pink noise first!', 'error');
+                return;
+            }
+
+            updateStatus('Requesting microphone access...', 'success');
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    } 
+                });
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyzer = audioContext.createAnalyser();
+                analyzer.fftSize = 8192; // High resolution
+                analyzer.smoothingTimeConstant = 0.8;
+                
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyzer);
+                
+                isMeasuring = true;
+                updateStatus('✅ Measuring... Auto-adjusting EQ', 'success');
+                
+                document.getElementById('btnStartMeasure').classList.add('disabled');
+                document.getElementById('btnStartMeasure').disabled = true;
+                document.getElementById('btnApply').classList.remove('disabled');
+                document.getElementById('btnApply').disabled = false;
+                
+                measurementInterval = setInterval(measureAndSend, 2500); // Every 2.5 seconds
+                
+            } catch (error) {
+                updateStatus('❌ Microphone error: ' + error.message, 'error');
+            }
+        }
+
+        function measureAndSend() {
+            const bufferLength = analyzer.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyzer.getByteFrequencyData(dataArray);
+            
+            // Convert to frequency/magnitude
+            const sampleRate = audioContext.sampleRate;
+            const frequencies = [];
+            const magnitudes = [];
+            
+            // Extract data for each frequency band
+            FREQ_BANDS.forEach(freq => {
+                const binIndex = Math.floor(freq / (sampleRate / analyzer.fftSize));
+                if (binIndex < bufferLength) {
+                    const magnitude = dataArray[binIndex];
+                    const dB = 20 * Math.log10(magnitude / 255); // Convert to dB
+                    frequencies.push(freq);
+                    magnitudes.push(dB);
+                }
+            });
+            
+            // Update display
+            updateFrequencyDisplay(frequencies, magnitudes);
+            drawSpectrum(dataArray);
+            
+            // Send to Pi for processing
+            sendFrequencyData(frequencies, magnitudes);
+        }
+
+        async function sendFrequencyData(frequencies, magnitudes) {
+            const freqResponse = {
+                frequencies: frequencies,
+                magnitude: magnitudes,
+                ambient_noise: ambientNoise
+            };
+            
+            try {
+                const response = await fetch(PI_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'cmd=process_frequency_response&frequency_response=' + 
+                          encodeURIComponent(JSON.stringify(freqResponse))
+                });
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    console.log('Frequency data processed:', data);
+                }
+            } catch (error) {
+                console.error('Send error:', error);
+            }
+        }
+
+        function updateFrequencyDisplay(frequencies, magnitudes) {
+            const display = document.getElementById('freqDisplay');
+            display.innerHTML = '';
+            
+            frequencies.forEach((freq, i) => {
+                const div = document.createElement('div');
+                div.className = 'freq-band';
+                div.innerHTML = `
+                    <div class="freq">${freq} Hz</div>
+                    <div class="value">${magnitudes[i].toFixed(1)} dB</div>
+                `;
+                display.appendChild(div);
+            });
+        }
+
+        function drawSpectrum(dataArray) {
+            const canvas = document.getElementById('spectrum');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, width, height);
+            
+            const barWidth = width / dataArray.length;
+            let x = 0;
+            
+            for (let i = 0; i < dataArray.length; i++) {
+                const barHeight = (dataArray[i] / 255) * height;
+                
+                const hue = (i / dataArray.length) * 360;
+                ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
+                ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+                
+                x += barWidth;
+            }
+        }
+
+        async function applyCorrection() {
+            updateStatus('Generating and applying EQ filters...', 'success');
+            
+            try {
+                // Generate PEQ filters
+                const genResponse = await fetch(PI_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'cmd=generate_peq&num_bands=12'
+                });
+                const genData = await genResponse.json();
+                
+                if (genData.status === 'ok') {
+                    // Apply PEQ
+                    const applyResponse = await fetch(PI_URL, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: 'cmd=apply_peq&preset_name=' + encodeURIComponent(genData.preset_name)
+                    });
+                    const applyData = await applyResponse.json();
+                    
+                    if (applyData.status === 'ok') {
+                        updateStatus('✅ EQ Applied! Preset: ' + genData.preset_name, 'success');
+                    } else {
+                        updateStatus('❌ Apply error: ' + applyData.message, 'error');
+                    }
+                } else {
+                    updateStatus('❌ Generate error: ' + genData.message, 'error');
+                }
+            } catch (error) {
+                updateStatus('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        async function stopAll() {
+            // Stop measurement
+            if (isMeasuring) {
+                clearInterval(measurementInterval);
+                if (microphone) microphone.disconnect();
+                if (audioContext) audioContext.close();
+                isMeasuring = false;
+            }
+            
+            // Stop pink noise
+            if (isPlaying) {
+                try {
+                    const response = await fetch(PI_URL, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: 'cmd=stop_pink_noise'
+                    });
+                    const data = await response.json();
+                    updateStatus('✅ Stopped', 'success');
+                } catch (error) {
+                    updateStatus('⚠️ Stopped locally', 'success');
+                }
+            }
+            
+            isPlaying = false;
+            
+            // Reset UI
+            document.getElementById('btnStartNoise').classList.remove('disabled');
+            document.getElementById('btnStartNoise').disabled = false;
+            document.getElementById('btnStartMeasure').classList.add('disabled');
+            document.getElementById('btnStartMeasure').disabled = true;
+            document.getElementById('btnApply').classList.add('disabled');
+            document.getElementById('btnApply').disabled = true;
+            
+            const ctx = document.getElementById('spectrum').getContext('2d');
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, 600, 200);
+        }
+    </script>
+</body>
+</html>

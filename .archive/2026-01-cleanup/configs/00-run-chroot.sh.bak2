@@ -1,0 +1,418 @@
+#!/bin/bash
+################################################################################
+#
+# Ghettoblaster Custom Components Integration
+#
+# - Create user 'andre'
+# - Compile custom overlays
+# - Apply worker.php patch
+# - Set permissions
+#
+# (C) 2025 Ghettoblaster Custom Build
+# License: GPLv3
+#
+################################################################################
+
+echo "=== GHETTOBLASTER CUSTOM COMPONENTS INTEGRATION ==="
+
+################################################################################
+# Create user 'andre'
+################################################################################
+
+echo "Creating user 'andre' with UID 1000 (CRITICAL - moOde requires UID 1000)..."
+if ! id -u andre >/dev/null 2>&1; then
+    # CRITICAL: moOde requires user with UID:GID 1000:1000
+    # Create user with specific UID 1000 and GID 1000
+    useradd -m -s /bin/bash -u 1000 -g 1000 andre 2>/dev/null || {
+        # If group 1000 doesn't exist, create it first
+        groupadd -g 1000 andre 2>/dev/null || true
+        useradd -m -s /bin/bash -u 1000 -g 1000 andre
+    }
+    usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre
+    # Set password for andre (CRITICAL FIX)
+    echo "andre:0815" | chpasswd 2>/dev/null || true
+    echo "✅ User 'andre' created with UID 1000 and password"
+else
+    echo "⚠️  User 'andre' already exists"
+    # Ensure UID is 1000 (CRITICAL)
+    CURRENT_UID=$(id -u andre)
+    if [ "$CURRENT_UID" != "1000" ]; then
+        echo "⚠️  User 'andre' has UID $CURRENT_UID, but moOde requires UID 1000"
+        echo "⚠️  Attempting to fix UID..."
+        # This is tricky - we may need to delete and recreate
+        # For now, warn but continue
+    fi
+    usermod -aG sudo andre 2>/dev/null || true
+    # Set password if not set
+    echo "andre:0815" | chpasswd 2>/dev/null || true
+fi
+
+# CRITICAL: Verify UID is 1000
+ANDRE_UID=$(id -u andre 2>/dev/null || echo "0")
+if [ "$ANDRE_UID" = "1000" ]; then
+    echo "✅ User 'andre' has correct UID 1000 (moOde compatible)"
+else
+    echo "❌ ERROR: User 'andre' has UID $ANDRE_UID, but moOde requires UID 1000"
+    echo "❌ moOde will show 'System doesn't contain a user ID' error"
+fi
+
+# Add andre to sudoers (CRITICAL FIX)
+echo "Adding 'andre' to sudoers..."
+echo "andre ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/andre 2>/dev/null || true
+chmod 0440 /etc/sudoers.d/andre 2>/dev/null || true
+echo "✅ User 'andre' added to sudoers"
+
+################################################################################
+# Compile custom overlays
+################################################################################
+
+echo "Compiling custom overlays..."
+OVERLAYS_DIR="/boot/firmware/overlays"
+
+# Check if dtc is available
+if ! command -v dtc &> /dev/null; then
+    echo "⚠️  dtc not found, overlays will be compiled on first boot"
+else
+    # Compile FT6236 overlay
+    if [ -f "$OVERLAYS_DIR/ghettoblaster-ft6236.dts" ]; then
+        dtc -@ -I dts -O dtb -o "$OVERLAYS_DIR/ghettoblaster-ft6236.dtbo" \
+            "$OVERLAYS_DIR/ghettoblaster-ft6236.dts" 2>/dev/null && \
+            echo "✅ FT6236 overlay compiled" || \
+            echo "⚠️  FT6236 overlay compilation failed"
+    fi
+
+    # Compile AMP100 overlay
+    if [ -f "$OVERLAYS_DIR/ghettoblaster-amp100.dts" ]; then
+        dtc -@ -I dts -O dtb -o "$OVERLAYS_DIR/ghettoblaster-amp100.dtbo" \
+            "$OVERLAYS_DIR/ghettoblaster-amp100.dts" 2>/dev/null && \
+            echo "✅ AMP100 overlay compiled" || \
+            echo "⚠️  AMP100 overlay compilation failed"
+    fi
+fi
+
+################################################################################
+# Apply worker.php patch
+################################################################################
+
+echo "Applying worker.php patch..."
+WORKER_FILE="/var/www/daemon/worker.php"
+PATCH_SCRIPT="/usr/local/bin/worker-php-patch.sh"
+
+if [ -f "$WORKER_FILE" ] && [ -f "$PATCH_SCRIPT" ]; then
+    if ! grep -q "Ghettoblaster: display_rotate=0" "$WORKER_FILE"; then
+        bash "$PATCH_SCRIPT"
+        echo "✅ worker.php patch applied"
+    else
+        echo "✅ worker.php patch already applied"
+    fi
+else
+    echo "⚠️  worker.php or patch script not found (will be applied on first boot)"
+fi
+
+################################################################################
+# Set permissions
+################################################################################
+
+echo "Setting permissions..."
+chmod +x /usr/local/bin/*.sh 2>/dev/null || true
+chown -R andre:andre /home/andre 2>/dev/null || true
+
+echo "✅ Permissions set"
+
+################################################################################
+# Install I2C stabilization scripts
+################################################################################
+
+echo "Installing I2C stabilization scripts..."
+if [ -f "/usr/local/bin/i2c-stabilize.sh" ]; then
+    chmod +x /usr/local/bin/i2c-stabilize.sh
+    echo "✅ I2C stabilization script installed"
+else
+    echo "⚠️  I2C stabilization script not found"
+fi
+
+if [ -f "/usr/local/bin/i2c-monitor.sh" ]; then
+    chmod +x /usr/local/bin/i2c-monitor.sh
+    echo "✅ I2C monitor script installed"
+else
+    echo "⚠️  I2C monitor script not found"
+fi
+
+################################################################################
+# Install I2C monitor service
+################################################################################
+
+echo "Installing I2C monitor service..."
+if [ -f "/lib/systemd/system/i2c-monitor.service" ]; then
+    systemctl enable i2c-monitor.service 2>/dev/null || true
+    echo "✅ I2C monitor service installed and enabled"
+else
+    echo "⚠️  I2C monitor service not found"
+fi
+
+################################################################################
+# Install Audio optimization script
+################################################################################
+
+echo "Installing Audio optimization script..."
+if [ -f "/usr/local/bin/audio-optimize.sh" ]; then
+    chmod +x /usr/local/bin/audio-optimize.sh
+    echo "✅ Audio optimization script installed"
+else
+    echo "⚠️  Audio optimization script not found"
+fi
+
+################################################################################
+# Install PCM5122 oversampling script
+################################################################################
+
+echo "Installing PCM5122 oversampling script..."
+if [ -f "/usr/local/bin/pcm5122-oversampling.sh" ]; then
+    chmod +x /usr/local/bin/pcm5122-oversampling.sh
+    echo "✅ PCM5122 oversampling script installed"
+else
+    echo "⚠️  PCM5122 oversampling script not found"
+fi
+
+################################################################################
+# Install PeppyMeter extended displays
+################################################################################
+
+echo "Installing PeppyMeter extended displays..."
+if [ -f "/usr/local/bin/peppymeter-extended-displays.py" ]; then
+    chmod +x /usr/local/bin/peppymeter-extended-displays.py
+    echo "✅ PeppyMeter extended displays script installed"
+else
+    echo "⚠️  PeppyMeter extended displays script not found"
+fi
+
+################################################################################
+# Install Python dependencies for Room Correction Wizard
+################################################################################
+
+echo "Installing Python dependencies for Room Correction..."
+apt-get update && apt-get install -y python3-scipy python3-soundfile python3-numpy xdotool || echo "⚠️  Some Python packages may not be available in chroot"
+
+################################################################################
+# Create directories for Room Correction
+################################################################################
+
+echo "Creating directories for Room Correction..."
+mkdir -p /var/lib/camilladsp/convolution
+mkdir -p /var/lib/camilladsp/measurements
+chmod 755 /var/lib/camilladsp/convolution
+chmod 755 /var/lib/camilladsp/measurements
+echo "✅ Room Correction directories created"
+
+################################################################################
+# Install PeppyMeter extended displays service
+################################################################################
+
+echo "Installing PeppyMeter extended displays service..."
+if [ -f "/lib/systemd/system/peppymeter-extended-displays.service" ]; then
+    systemctl enable peppymeter-extended-displays.service 2>/dev/null || true
+    echo "✅ PeppyMeter extended displays service installed and enabled"
+else
+    echo "⚠️  PeppyMeter extended displays service not found"
+fi
+
+################################################################################
+# Install Audio optimization service
+################################################################################
+
+echo "Installing Audio optimization service..."
+if [ -f "/lib/systemd/system/audio-optimize.service" ]; then
+    systemctl enable audio-optimize.service 2>/dev/null || true
+    echo "✅ Audio optimization service installed and enabled"
+else
+    echo "⚠️  Audio optimization service not found"
+fi
+
+################################################################################
+# Disable Console on tty1 (prevent console display)
+################################################################################
+
+echo "Disabling console on tty1..."
+systemctl disable getty@tty1.service 2>/dev/null || true
+systemctl mask getty@tty1.service 2>/dev/null || true
+echo "✅ Console on tty1 disabled"
+
+################################################################################
+# Install disable-console service
+################################################################################
+
+echo "Installing disable-console service..."
+if [ -f "/lib/systemd/system/disable-console.service" ]; then
+    systemctl enable disable-console.service 2>/dev/null || true
+    echo "✅ disable-console service installed and enabled"
+else
+    echo "⚠️  disable-console service not found"
+fi
+
+################################################################################
+# Install fix-ssh-sudoers service (CRITICAL - runs on every boot)
+################################################################################
+
+echo "Installing fix-ssh-sudoers service..."
+if [ -f "/lib/systemd/system/fix-ssh-sudoers.service" ]; then
+    systemctl enable fix-ssh-sudoers.service 2>/dev/null || true
+    echo "✅ fix-ssh-sudoers service installed and enabled"
+else
+    echo "⚠️  fix-ssh-sudoers service not found"
+fi
+
+################################################################################
+# Install enable-ssh-early service (CRITICAL - before moOde can disable SSH)
+################################################################################
+
+echo "Installing enable-ssh-early service..."
+if [ -f "/lib/systemd/system/enable-ssh-early.service" ]; then
+    systemctl enable enable-ssh-early.service 2>/dev/null || true
+    echo "✅ enable-ssh-early service installed and enabled"
+else
+    echo "⚠️  enable-ssh-early service not found"
+fi
+
+################################################################################
+# Install fix-user-id service (CRITICAL - moOde requires UID 1000)
+################################################################################
+
+echo "Installing fix-user-id service..."
+if [ -f "/lib/systemd/system/fix-user-id.service" ]; then
+    systemctl enable fix-user-id.service 2>/dev/null || true
+    echo "✅ fix-user-id service installed and enabled"
+else
+    echo "⚠️  fix-user-id service not found"
+fi
+
+################################################################################
+# Enable localdisplay service
+################################################################################
+
+echo "Enabling localdisplay service..."
+if [ -f "/lib/systemd/system/localdisplay.service" ]; then
+    systemctl enable localdisplay.service 2>/dev/null || true
+    echo "✅ localdisplay service enabled"
+else
+    echo "⚠️  localdisplay service not found"
+fi
+
+################################################################################
+# Enable SSH service (CRITICAL FIX - permanent problem)
+################################################################################
+
+echo "Enabling SSH service..."
+systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true
+systemctl enable ssh.service 2>/dev/null || systemctl enable sshd.service 2>/dev/null || true
+touch /boot/firmware/ssh 2>/dev/null || true
+echo "✅ SSH service enabled (CRITICAL FIX)"
+
+################################################################################
+# Create log directories
+################################################################################
+
+echo "Creating log directories..."
+mkdir -p /var/log
+touch /var/log/chromium-clean.log
+touch /var/log/i2c-stabilize.log
+touch /var/log/i2c-monitor.log
+chmod 666 /var/log/chromium-clean.log 2>/dev/null || true
+chmod 666 /var/log/i2c-stabilize.log 2>/dev/null || true
+chmod 666 /var/log/i2c-monitor.log 2>/dev/null || true
+
+echo "✅ Log directories created"
+
+# FINAL FIX: Ensure sudoers is set AFTER all moOde installations
+echo "=== FINAL FIX: Sudoers and SSH ==="
+echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre
+chmod 0440 /etc/sudoers.d/andre
+visudo -c -f /etc/sudoers.d/andre 2>/dev/null || true
+echo "✅ Final sudoers fix applied"
+
+# FINAL FIX: Ensure SSH is enabled (MULTIPLE METHODS)
+echo "=== FINAL FIX: SSH Enable (Multiple Methods) ==="
+# Method 1: systemctl enable
+systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null || true
+systemctl enable ssh.service 2>/dev/null || systemctl enable sshd.service 2>/dev/null || true
+
+# Method 2: Create /boot/firmware/ssh file (Raspberry Pi standard)
+touch /boot/firmware/ssh 2>/dev/null || true
+touch /boot/ssh 2>/dev/null || true
+
+# Method 3: Create symlink manually
+mkdir -p /etc/systemd/system/multi-user.target.wants 2>/dev/null || true
+ln -sf /lib/systemd/system/ssh.service /etc/systemd/system/multi-user.target.wants/ssh.service 2>/dev/null || true
+ln -sf /lib/systemd/system/sshd.service /etc/systemd/system/multi-user.target.wants/sshd.service 2>/dev/null || true
+
+# Method 4: Start SSH immediately
+systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null || true
+
+echo "✅ Final SSH enable fix applied (multiple methods)"
+
+################################################################################
+# Configure WLAN (Ghettoblaster - Pre-configured)
+################################################################################
+
+echo "Configuring WLAN..."
+mkdir -p /etc/wpa_supplicant 2>/dev/null || true
+
+# Create wpa_supplicant.conf with WLAN credentials
+cat > /etc/wpa_supplicant/wpa_supplicant.conf << 'WPA_EOF'
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=DE
+
+network={
+    ssid="Martin Router King"
+    psk="06082020"
+}
+WPA_EOF
+
+chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf 2>/dev/null || true
+
+# Enable wpa_supplicant service for WLAN
+systemctl enable wpa_supplicant.service 2>/dev/null || true
+systemctl enable wpa_supplicant@wlan0.service 2>/dev/null || true
+echo "✅ WLAN configured (SSID: Martin Router King)"
+echo "✅ WLAN service enabled"
+
+################################################################################
+# Set Hostname (GhettoBlaster - CRITICAL FIX)
+################################################################################
+
+echo "Setting hostname to GhettoBlaster..."
+# Set hostname in /etc/hostname
+echo "GhettoBlaster" > /etc/hostname 2>/dev/null || true
+
+# Set hostname with hostnamectl (if available)
+if command -v hostnamectl &> /dev/null; then
+    hostnamectl set-hostname GhettoBlaster 2>/dev/null || true
+fi
+
+# Update /etc/hosts
+if ! grep -q "GhettoBlaster" /etc/hosts 2>/dev/null; then
+    sed -i 's/127.0.1.1.*/127.0.1.1\tGhettoBlaster/' /etc/hosts 2>/dev/null || \
+    echo "127.0.1.1\tGhettoBlaster" >> /etc/hosts 2>/dev/null || true
+fi
+
+echo "✅ Hostname set to GhettoBlaster"
+
+################################################################################
+# Configure Network IP (Ghettoblaster - avoid 142/143 repeater IPs)
+################################################################################
+
+echo "Configuring Network IP (avoid 142/143)..."
+# Copy network fix script
+if [ -f "/usr/local/bin/fix-network-ip.sh" ]; then
+    chmod +x /usr/local/bin/fix-network-ip.sh 2>/dev/null || true
+    # Enable network fix service
+    if [ -f "/lib/systemd/system/fix-network-ip.service" ] || [ -f "/etc/systemd/system/fix-network-ip.service" ]; then
+        systemctl enable fix-network-ip.service 2>/dev/null || true
+        echo "✅ Network IP fix service enabled"
+    fi
+else
+    echo "⚠️  fix-network-ip.sh not found (will be created on first boot)"
+fi
+
+echo "=== GHETTOBLASTER CUSTOM COMPONENTS INTEGRATION COMPLETE ==="
+

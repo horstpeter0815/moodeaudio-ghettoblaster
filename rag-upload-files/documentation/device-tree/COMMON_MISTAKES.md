@@ -1,469 +1,354 @@
 # Device Tree Common Mistakes
 
-**Purpose:** Document common mistakes when working with device tree overlays and how to avoid them
+## Mistake 1: Trying to Configure IEC958 in Device Tree
 
----
+### ❌ Wrong
 
-## 1. Making Up Parameters That Don't Exist
-
-### The Mistake
-
-**Example:**
 ```ini
-dtparam=disable_iec958
-dtparam=remove_hdmi_audio
-dtparam=enable_stereo
+dtoverlay=hifiberry-amp100,disable_iec958
 ```
 
 ### Why It's Wrong
 
-Parameters must exist in the overlay's `__overrides__` section to work. You cannot invent parameters.
+IEC958 (S/PDIF) is **ALSA software configuration**, not hardware initialization. Device tree initializes the PCM5122 DAC hardware. ALSA then routes audio through it.
 
-**How to verify a parameter exists:**
-1. Find the .dts source file
-2. Look for `__overrides__` section
-3. Check if parameter is listed
+### ✅ Correct
 
-**Example of valid `__overrides__`:**
-```dts
-__overrides__ {
-    auto_mute = <&sound>,"hifiberry-dacplus,auto_mute?";
-    24db_digital_gain = <&sound>,"hifiberry,24db_digital_gain?";
-};
-```
+Configure IEC958 in ALSA layer:
 
-### The Fix
-
-**Wrong:**
-```ini
-dtparam=disable_iec958  # Does not exist!
-```
-
-**Correct:**
-```ini
-# IEC958 is ALSA software, not device tree hardware
-# Fix in moOde database:
-UPDATE cfg_system SET value='plughw' WHERE param='alsa_output_mode';
-```
-
----
-
-## 2. Confusing Hardware and Software Layers
-
-### The Mistake
-
-Trying to fix software problems with device tree parameters, or vice versa.
-
-### Examples
-
-**Mistake: Trying to configure ALSA routing in device tree**
-```ini
-dtparam=use_camilladsp  # Does not exist
-dtparam=alsa_device=iec958  # Wrong layer
-```
-
-**Why:** Device tree configures hardware (I2C, I2S, GPIO). ALSA routing is software configuration.
-
-**Correct approach:**
-- Device tree: Initialize PCM5122 DAC hardware
-- ALSA config: Route audio through CamillaDSP plugin
-- File: `/etc/alsa/conf.d/_audioout.conf`
-
-**Mistake: Expecting device tree to set volume**
-```ini
-dtparam=volume=50  # Does not exist
-```
-
-**Why:** Volume is controlled by ALSA (amixer) or MPD, not hardware initialization.
-
-**Correct approach:**
 ```bash
-# ALSA volume
-amixer -c 0 sset Digital 50%
+# Disable IEC958 via ALSA control
+amixer sset 'IEC958' off
 
-# MPD volume
-mpc volume 50
+# Or in /etc/asound.conf
+pcm.!default {
+    type plug
+    slave.pcm "noiec958"
+}
+
+pcm.noiec958 {
+    type hw
+    card 0
+}
 ```
 
-### Layer Breakdown
+### Layer Understanding
 
-**Device Tree (Hardware):**
-- I2C devices and addresses
-- I2S interface enable
-- GPIO assignments
-- Clock sources
-- Power supplies
+```
+Device Tree → PCM5122 Hardware → ALSA → IEC958 Routing
+(Initializes I2C/I2S)            (Software routing)
+```
 
-**ALSA (Software - Audio Routing):**
-- Device names (_audioout, camilladsp, iec958)
-- Plugin chains
-- Sample rate conversion
-- Volume control
+## Mistake 2: Expecting Device Tree to Rotate Display
 
-**moOde (Application):**
-- Database settings
-- User preferences
-- MPD configuration
-
----
-
-## 3. Expecting Display Rotation from Device Tree
-
-### The Mistake
+### ❌ Wrong
 
 ```ini
-dtoverlay=vc4-kms-v3d,rotate=90  # Parameter doesn't exist
-dtparam=display_rotate=1  # Wrong place
+dtoverlay=vc4-kms-v3d-pi5,rotation=90
 ```
+
+**This parameter doesn't exist!**
 
 ### Why It's Wrong
 
-Display rotation requires THREE separate configurations:
+Display rotation happens at TWO different layers:
 
-1. **Boot framebuffer** (cmdline.txt)
-2. **X11 runtime** (.xinitrc)
-3. **Console** (fbcon parameter)
+1. **Boot screen** (before X11): `cmdline.txt` video parameter
+2. **Runtime screen** (X11): `xrandr` rotation
 
-Device tree only **enables** display controller, it doesn't rotate.
+Device tree only **initializes display hardware**, not framebuffer orientation.
 
-### The Fix
+### ✅ Correct
 
-**Boot screen rotation:**
+**For boot screen:**
+
 ```bash
 # /boot/firmware/cmdline.txt
-video=HDMI-A-1:400x1280M@60,rotate=90 fbcon=rotate:1
+video=HDMI-A-1:1280x400@60
 ```
 
-**X11 rotation:**
+**For runtime (moOde UI):**
+
 ```bash
-# /home/andre/.xinitrc
-DISPLAY=:0 xrandr --output HDMI-2 --rotate left
+# ~/.xinitrc reads from moOde database
+HDMI_SCN_ORIENT=$(moodeutl -q "SELECT value FROM cfg_system WHERE param='hdmi_scn_orient'")
+if [ "$HDMI_SCN_ORIENT" = "portrait" ]; then
+    xrandr --output HDMI-2 --rotate left
+fi
 ```
 
-**Device tree (only enables hardware):**
-```ini
-dtoverlay=vc4-kms-v3d,noaudio
+### Layer Understanding
+
+```
+Boot Time:
+cmdline.txt → Framebuffer orientation (1280x400 landscape)
+    ↓
+Runtime:
+.xinitrc → xrandr → X11 rotation (landscape or portrait)
 ```
 
----
+## Mistake 3: Making Up Parameters
 
-## 4. Wrong Spelling or Syntax
+### ❌ Wrong
 
-### Common Spelling Mistakes
-
-**Wrong:**
 ```ini
-dtparam=automute          # Missing underscore
-dtparam=auto-mute         # Wrong separator
-dtparam=AUTOMUTE          # Wrong case
-```
-
-**Correct:**
-```ini
-dtparam=auto_mute         # Underscore, lowercase
-```
-
-### Syntax Mistakes
-
-**Wrong:**
-```ini
-dtoverlay=hifiberry-amp100:auto_mute    # Wrong separator
-dtoverlay=hifiberry-amp100 auto_mute    # Missing comma
-dtparam = auto_mute                      # Extra spaces
-```
-
-**Correct:**
-```ini
-dtoverlay=hifiberry-amp100,auto_mute    # Comma separator
-# or
-dtparam=auto_mute                       # No spaces around =
-```
-
----
-
-## 5. Not Checking If Overlay Has Parameters
-
-### The Mistake
-
-Assuming an overlay has configurable parameters when it doesn't.
-
-**Example:**
-```ini
-dtoverlay=ft6236,touchscreen-size-x=1920  # No parameters!
+dtoverlay=hifiberry-amp100,automute      # Typo
+dtoverlay=hifiberry-amp100,gain=24       # Wrong name
+dtoverlay=hifiberry-amp100,volume=50     # Doesn't exist
 ```
 
 ### Why It's Wrong
 
-The `ft6236` overlay has no `__overrides__` section. All configuration is fixed in the source.
+Parameters MUST be defined in the overlay's `__overrides__` section. You can't make them up!
 
-**Check the source:**
+### ✅ Correct
+
+**Always check the overlay source first:**
+
+```bash
+# View upstream overlay
+curl -s https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.6.y/arch/arm/boot/dts/overlays/hifiberry-dacplus-overlay.dts | grep -A 10 "__overrides__"
+```
+
+**Upstream hifiberry-dacplus has:**
+- `24db_digital_gain` (not "gain")
+- `slave`
+- `leds_off`
+- **NOT** `auto_mute` (that's in custom variants only)
+
+### How to Verify Parameters
+
+1. Read the `.dts` source file
+2. Find the `__overrides__` section
+3. Only use parameters listed there
+4. Check if boolean (`?`) or value (`:0`)
+
+## Mistake 4: Using Wrong Overlay for Pi Model
+
+### ❌ Wrong (Pi 5)
+
+```ini
+dtoverlay=vc4-kms-v3d  # This is for Pi 4 and earlier!
+```
+
+### Why It's Wrong
+
+Pi 5 has different hardware:
+- Different compatible string: `brcm,bcm2712` (vs `brcm,bcm2835`)
+- Different I2S controller path
+- Different HDMI controller structure (hdmi0, hdmi1)
+
+### ✅ Correct (Pi 5)
+
+```ini
+dtoverlay=vc4-kms-v3d-pi5
+```
+
+### Detection
+
+The overlay checks compatible string:
+
 ```dts
-// ghettoblaster-ft6236.dts
 / {
-    fragment@0 {
-        target = <&i2c1>;
-        __overlay__ {
-            ft6236: ft6236@38 {
-                touchscreen-size-x = <1280>;  // FIXED
-                // ...
-            };
-        };
-    };
-    // NO __overrides__ section!
-};
+    compatible = "brcm,bcm2712";  // Pi 5
+}
 ```
 
-### The Fix
+If you use Pi 4 overlay on Pi 5, it won't match and won't load properly.
 
-**To change parameters:**
-1. Edit the .dts source file
-2. Recompile to .dtbo
-3. Replace overlay in `/boot/firmware/overlays/`
-4. Reboot
+## Mistake 5: Confusing dtoverlay vs dtparam
 
----
+### ❌ Wrong
 
-## 6. Using Wrong Compatible String
-
-### The Mistake
-
-Using Pi 4 overlays on Pi 5, or vice versa.
-
-**Example:**
-```dts
-compatible = "brcm,bcm2711";  // Pi 4
-// But running on Pi 5 (bcm2712)
-```
-
-### Why It Matters
-
-- Different I2S controller paths
-- Different device tree structure
-- May not load or work incorrectly
-
-**Check Pi model:**
-```bash
-cat /proc/device-tree/compatible
-# Pi 5: brcm,bcm2712
-# Pi 4: brcm,bcm2711
-```
-
-### The Fix
-
-**Pi 5 I2S path:**
-```dts
-target-path = "/axi/pcie@1000120000/rp1/i2s@a4000";
-```
-
-**Pi 4 I2S path:**
-```dts
-target-path = "/soc/i2s@7e203000";  // Different!
-```
-
-**Use correct compatible string:**
-```dts
-compatible = "brcm,bcm2712";  // For Pi 5
-```
-
----
-
-## 7. Loading Conflicting Overlays
-
-### The Mistake
-
-Loading multiple overlays that use the same resources.
-
-**Example:**
 ```ini
-dtoverlay=hifiberry-amp100
-dtoverlay=hifiberry-dac
-dtoverlay=iqaudio-dacplus
+dtparam=hifiberry-amp100  # dtparam is for simple on/off only!
 ```
 
-### Why It's Wrong
+### ✅ Correct
 
-- All three try to configure I2S and I2C
-- Causes device conflicts
-- System may not boot or audio won't work
-
-### The Fix
-
-**Use only ONE audio overlay:**
 ```ini
-dtoverlay=hifiberry-amp100  # Only this one
+dtoverlay=hifiberry-amp100  # Loads overlay
+dtparam=i2c_arm=on          # Enables I2C
+dtparam=i2s=on              # Enables I2S
 ```
 
-**Check for conflicts:**
-```bash
-# List loaded overlays
-vcgencmd get_config dtoverlay
+### Understanding
 
-# Check for duplicate devices
-i2cdetect -y 1  # Should see ONLY one DAC
-```
+- **dtoverlay** = Load device tree overlay (`.dtbo` file)
+- **dtparam** = Set simple on/off parameter in base device tree
 
----
+## Mistake 6: Duplicating Overlays
 
-## 8. Duplicate dtoverlay Lines
+### ❌ Redundant
 
-### The Mistake
-
-Having the same overlay loaded multiple times.
-
-**Example:**
 ```ini
 dtoverlay=vc4-kms-v3d-pi5,noaudio
-# ... other settings ...
-dtoverlay=vc4-kms-v3d-pi5,noaudio   # Duplicate!
+dtoverlay=hifiberry-amp100
+dtoverlay=vc4-kms-v3d-pi5,noaudio  # Duplicate!
 ```
 
 ### Why It's Wrong
 
-- Wastes resources
-- May cause initialization conflicts
-- Can lead to unexpected behavior
+Loading the same overlay twice is wasteful. The second load is ignored (no error, but no benefit).
 
-### The Fix
+### ✅ Correct
 
-**Check config.txt for duplicates:**
+```ini
+dtoverlay=vc4-kms-v3d-pi5,noaudio
+dtoverlay=hifiberry-amp100
+```
+
+### Check for Duplicates
+
 ```bash
 grep "^dtoverlay=" /boot/firmware/config.txt | sort | uniq -d
 ```
 
-**Remove duplicates:**
-```bash
-# Edit config.txt and keep only one instance
-dtoverlay=vc4-kms-v3d,noaudio  # Keep this
-# dtoverlay=vc4-kms-v3d,noaudio  # Remove duplicate
-```
+## Mistake 7: Expecting Device Tree to Control Volume
 
----
+### ❌ Wrong
 
-## 9. Forgetting to Enable I2C
-
-### The Mistake
-
-Loading overlay that needs I2C without enabling I2C bus.
-
-**Example:**
 ```ini
-dtoverlay=hifiberry-amp100  # Needs I2C
-# Missing: dtparam=i2c_arm=on
+dtoverlay=hifiberry-amp100,volume=50
 ```
+
+**This parameter doesn't exist!**
 
 ### Why It's Wrong
 
-- DAC can't be configured without I2C
-- Device won't be detected
-- Audio won't work
+Volume is controlled by:
+1. **ALSA** - `amixer sset 'Digital' 80%`
+2. **MPD** - MPD volume control
+3. **moOde** - moOde UI volume slider
 
-### The Fix
+Device tree only initializes the DAC hardware.
 
-**Always enable I2C for HATs:**
-```ini
-dtparam=i2c_arm=on
-dtparam=i2s=on
-dtoverlay=hifiberry-amp100
-```
-
-**Verify:**
-```bash
-ls -la /dev/i2c-*
-# Should show: /dev/i2c-1
-
-i2cdetect -y 1
-# Should show device at 0x4d
-```
-
----
-
-## 10. Not Understanding dtparam vs dtoverlay
-
-### The Mistake
-
-Confusing when to use `dtparam` vs `dtoverlay`.
-
-**Confused usage:**
-```ini
-dtoverlay=auto_mute           # Wrong - not an overlay
-dtparam=hifiberry-amp100      # Wrong - not a parameter
-```
-
-### The Difference
-
-**dtoverlay:**
-- Loads a complete overlay (.dtbo file)
-- Can include inline parameters
-- Example: `dtoverlay=hifiberry-amp100,auto_mute`
-
-**dtparam:**
-- Sets a single parameter
-- Affects most recent overlay
-- Example: `dtparam=auto_mute`
-
-### Equivalent Syntax
-
-```ini
-# Method 1: Inline parameter
-dtoverlay=hifiberry-amp100,auto_mute
-
-# Method 2: Separate parameter
-dtoverlay=hifiberry-amp100
-dtparam=auto_mute
-
-# Both do the same thing
-```
-
----
-
-## Summary: How to Avoid Mistakes
-
-### Before Adding a Parameter:
-
-1. **Find the overlay source** (.dts file)
-2. **Check for `__overrides__` section**
-3. **Verify parameter exists**
-4. **Check correct syntax** (boolean, integer, etc.)
-5. **Understand what layer it affects** (hardware vs software)
-
-### Debugging Checklist:
+### ✅ Correct
 
 ```bash
-# 1. Check loaded overlays
-vcgencmd get_config dtoverlay
+# Set volume via ALSA
+amixer -c 0 sset 'Digital' 80%
 
-# 2. Check I2C devices
+# Or via MPD
+mpc volume 50
+```
+
+## Mistake 8: Not Checking I2C After Overlay Load
+
+### ❌ Wrong Workflow
+
+```
+1. Add dtoverlay=hifiberry-amp100 to config.txt
+2. Reboot
+3. Assume it works
+4. Wonder why no sound
+```
+
+### ✅ Correct Workflow
+
+```bash
+# 1. Add overlay to config.txt
+sudo nano /boot/firmware/config.txt
+# dtoverlay=hifiberry-amp100
+
+# 2. Reboot
+sudo reboot
+
+# 3. VERIFY I2C detection
 i2cdetect -y 1
+# Should show 0x4d = PCM5122
 
-# 3. Check sound cards
+# 4. VERIFY sound card
 cat /proc/asound/cards
+aplay -l
 
-# 4. Check for errors
-dmesg | grep -i error
-dmesg | grep -i i2c
-dmesg | grep -i sound
-
-# 5. Check device tree status
-dtoverlay -l
+# 5. Check kernel messages
+dmesg | grep pcm5122
 ```
 
-### When Things Don't Work:
+## Mistake 9: Mixing Hardware and Software Fixes
 
-1. **Don't guess** - read the source
-2. **Don't invent parameters** - check `__overrides__`
-3. **Don't mix layers** - hardware vs software
-4. **Don't assume** - verify with commands
-5. **Check git history** - find working configs
+### ❌ Wrong Approach
 
----
+```
+Problem: IEC958 showing in ALSA
+Wrong fix: Try to disable in device tree
+Result: Doesn't work (IEC958 is software!)
+```
 
-## Related Documentation
+### ✅ Correct Approach
 
-- [Device Tree Overview](DEVICE_TREE_OVERVIEW.md)
-- [HiFiBerry AMP100](HIFIBERRY_AMP100_DTO.md)
-- [FT6236 Touch](FT6236_DTO.md)
-- [Master Reference](../../../WISSENSBASIS/DEVICE_TREE_MASTER_REFERENCE.md)
+**Identify the layer:**
 
----
+| Layer | Controls What | Configured Where |
+|-------|---------------|------------------|
+| Hardware | I2C, I2S, GPIO | Device tree |
+| Driver | PCM5122 features | Kernel module |
+| ALSA | Audio routing | /etc/asound.conf |
+| Application | Playback | MPD, moOde |
 
-**Key Takeaway:** Most device tree mistakes come from not understanding what layer (hardware vs software) controls what, and from inventing parameters without checking if they exist in the overlay's `__overrides__` section. Always read the source first, then verify on hardware.
+**Fix at the correct layer:**
+
+```bash
+# IEC958 problem? → Fix in ALSA layer
+amixer sset 'IEC958' off
+
+# Display orientation? → Fix in cmdline.txt + xrandr
+# Volume issue? → Fix in ALSA/MPD
+# Playback issue? → Fix in MPD config
+```
+
+## Mistake 10: Not Reading Overlay Source
+
+### ❌ Wrong
+
+```
+Guessing parameters based on forum posts or old documentation
+```
+
+### ✅ Correct
+
+**Always read the actual overlay source:**
+
+```bash
+# View local overlay
+cat /boot/firmware/overlays/hifiberry-dacplus.dts
+
+# View upstream overlay
+curl -s https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.6.y/arch/arm/boot/dts/overlays/hifiberry-dacplus-overlay.dts
+
+# Check what parameters exist
+grep -A 20 "__overrides__" <overlay-file>
+```
+
+**Trust the source, not random internet advice!**
+
+## Summary of Key Principles
+
+1. ✅ **Device tree = Hardware initialization only**
+2. ✅ **Check overlay source for available parameters**
+3. ✅ **Use correct overlay for Pi model (Pi 5 needs -pi5 variants)**
+4. ✅ **Fix problems at the correct layer (hardware vs software)**
+5. ✅ **Verify with i2cdetect and aplay after changes**
+6. ✅ **Don't make up parameters - they must exist in __overrides__**
+7. ✅ **Understand dtoverlay (loads overlay) vs dtparam (simple on/off)**
+
+## Quick Reference: What Layer?
+
+| Problem | Layer | Fix Where |
+|---------|-------|-----------|
+| DAC not detected | Hardware | Device tree |
+| No sound card | Hardware/Driver | Device tree + kernel |
+| IEC958 appearing | Software | ALSA (asound.conf) |
+| Wrong volume | Software | ALSA/MPD |
+| Display orientation | Boot/X11 | cmdline.txt + xrandr |
+| No display | Hardware | Device tree + config.txt |
+| Touch not working | Hardware | Device tree (touch overlay) |
+| Touch mapping wrong | Software | X11 (xinput) |
+
+## See Also
+
+- [DEVICE_TREE_OVERVIEW.md](DEVICE_TREE_OVERVIEW.md)
+- [HIFIBERRY_AMP100_DTO.md](HIFIBERRY_AMP100_DTO.md)
+- [VC4_KMS_DTO.md](VC4_KMS_DTO.md)
+- [PARAMETERS_REFERENCE.md](PARAMETERS_REFERENCE.md)

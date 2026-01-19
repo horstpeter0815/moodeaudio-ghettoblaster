@@ -1,369 +1,565 @@
-# HiFiBerry AMP100 Device Tree Overlay
+# HiFiBerry AMP100 Device Tree Overlay Analysis
 
-**Overlay Name:** `hifiberry-amp100`  
-**Purpose:** Configure PCM5122 DAC and I2S interface for 2x50W Class D amplifier
+## Overview
 
----
+The HiFiBerry AMP100 uses the **same overlay as HiFiBerry DAC+** (`hifiberry-dacplus`). Both use the PCM5122 DAC chip. The only difference is the AMP100 has an integrated amplifier.
 
-## Hardware Overview
+**Overlay name in config.txt:** `hifiberry-amp100` or `hifiberry-dacplus`
 
-### HiFiBerry AMP100 Specifications
+**Upstream source:** https://github.com/raspberrypi/linux/blob/rpi-6.6.y/arch/arm/boot/dts/overlays/hifiberry-dacplus-overlay.dts
 
-**Audio DAC:**
-- Chip: Texas Instruments PCM5122
-- Sample rates: 44.1kHz - 384kHz
-- Bit depth: 16-32 bit
-- SNR: 112dB
+## Hardware Components
 
-**Amplifier:**
-- Output: 2x50W @ 4Ω
-- Class D (high efficiency)
-- Auto-mute capability
+### 1. PCM5122 DAC (Texas Instruments)
 
-**Interface:**
-- I2S digital audio
-- I2C control (address 0x4d)
-- GPIO control (optional)
+- **Chip:** PCM5122 - 32-bit, 384kHz Audio Stereo DAC
+- **I2C Address:** 0x4d
+- **Interface:** I2S (Inter-IC Sound)
+- **Data sheet:** https://www.ti.com/product/PCM5122
 
----
+**Capabilities:**
+- 32-bit audio processing
+- Sample rates: 8kHz - 384kHz
+- THD+N: -100dB (typical)
+- DNR: 112dB (typical)
 
-## Device Tree Configuration
+### 2. AMP100 Amplifier
 
-### I2C Device (PCM5122 DAC)
+- **Power:** 2x 30W @ 4Ω
+- **Class:** Class D
+- **Features:** Auto-mute, thermal protection, short circuit protection
 
-**Address:** `0x4d` on I2C1 bus
+## Overlay Structure Analysis
 
-**Driver:** `snd-soc-pcm512x` kernel module
+### Fragment 0: Clock Generator
 
-**Power Supplies:**
 ```dts
-AVDD-supply = <&vdd_3v3_reg>;  // Analog power
-DVDD-supply = <&vdd_3v3_reg>;  // Digital power
-CPVDD-supply = <&vdd_3v3_reg>; // Charge pump power
-```
-
-**Clock Source:**
-```dts
-dacpro_osc: dacpro_osc {
-    compatible = "hifiberry,dacpro-clk";
-    #clock-cells = <0>;
+fragment@0 {
+    target-path = "/";
+    __overlay__ {
+        dacpro_osc: dacpro_osc {
+            compatible = "hifiberry,dacpro-clk";
+            #clock-cells = <0>;
+        };
+    };
 };
 ```
 
-### I2S Interface
+**Purpose:** Creates a clock source for the PCM5122 DAC.
 
-**Pi 5 Path:** `/axi/pcie@1000120000/rp1/i2s@a4000`
+**Why needed:** The PCM5122 needs a master clock (MCLK) to generate audio sample rates. The HiFiBerry boards have an onboard oscillator that provides this clock.
 
-**Pi 4 Path:** Different (uses different I2S controller)
+**Driver:** `hifiberry,dacpro-clk` - Custom HiFiBerry clock driver
 
-**Configuration:**
+### Fragment 1: I2S Controller
+
 ```dts
-i2s-controller = <&i2s>;
-status = "okay";
+frag1: fragment@1 {
+    target = <&i2s_clk_consumer>;
+    __overlay__ {
+        status = "okay";
+    };
+};
 ```
 
-### Sound Card
+**Purpose:** Enables the I2S controller in "clock consumer" mode.
 
-**Compatible String:** `hifiberry,hifiberry-amp` or `hifiberry,hifiberry-dacplus`
+**Clock consumer vs producer:**
+- **Consumer mode (slave):** DAC generates clocks (BCK, LRCK), Pi receives them
+- **Producer mode (master):** Pi generates clocks, DAC receives them
 
-**ALSA Card Name:** `sndrpihifiberry`
+**HiFiBerry AMP100 uses consumer mode** because the DAC generates its own clocks from the oscillator.
 
-**Device Number:** Typically `card 0` or `card 1`
+**On Pi 5:** `i2s_clk_consumer` resolves to `/axi/pcie@1000120000/rp1/i2s@a4000`
 
----
+### Fragment 2: I2C Configuration
 
-## Available Parameters
+```dts
+fragment@2 {
+    target = <&i2c1>;
+    __overlay__ {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        status = "okay";
 
-### 1. auto_mute
-
-**Type:** Boolean  
-**Default:** false  
-**Purpose:** Automatically mute amplifier when no audio signal
-
-**Usage:**
-```ini
-dtoverlay=hifiberry-amp100
-dtparam=auto_mute
+        pcm5122@4d {
+            #sound-dai-cells = <0>;
+            compatible = "ti,pcm5122";
+            reg = <0x4d>;
+            clocks = <&dacpro_osc>;
+            AVDD-supply = <&vdd_3v3_reg>;
+            DVDD-supply = <&vdd_3v3_reg>;
+            CPVDD-supply = <&vdd_3v3_reg>;
+            status = "okay";
+        };
+        
+        hpamp: hpamp@60 {
+            compatible = "ti,tpa6130a2";
+            reg = <0x60>;
+            status = "disabled";
+        };
+    };
+};
 ```
 
-**Behavior:**
-- Monitors audio signal
-- Mutes after ~3 seconds of silence
-- Unmutes when audio starts
-- Reduces idle power and noise
+**Purpose:** Configures the PCM5122 DAC on I2C bus 1.
 
-**Hardware Implementation:**
-- Controlled by PCM5122 internal logic
-- No external GPIO required
-- Affects amplifier enable signal
+**Key properties:**
 
-### 2. 24db_digital_gain
+| Property | Value | Description |
+|----------|-------|-------------|
+| `compatible` | `ti,pcm5122` | Linux driver to use |
+| `reg` | `0x4d` | I2C slave address |
+| `clocks` | `<&dacpro_osc>` | Clock source (from fragment@0) |
+| `AVDD-supply` | `<&vdd_3v3_reg>` | Analog power supply (3.3V) |
+| `DVDD-supply` | `<&vdd_3v3_reg>` | Digital power supply (3.3V) |
+| `CPVDD-supply` | `<&vdd_3v3_reg>` | Charge pump power supply (3.3V) |
 
-**Type:** Boolean  
-**Default:** false  
-**Purpose:** Enable 24dB digital gain boost
+**Headphone amplifier (hpamp@60):**
+- Disabled by default
+- Used on HiFiBerry DAC+ Pro (has headphone output)
+- Not used on AMP100 (no headphone jack)
 
-**Usage:**
-```ini
-dtoverlay=hifiberry-amp100,24db_digital_gain
+### Fragment 3: Sound Card
+
+```dts
+fragment@3 {
+    target = <&sound>;
+    hifiberry_dacplus: __overlay__ {
+        compatible = "hifiberry,hifiberry-dacplus";
+        i2s-controller = <&i2s_clk_consumer>;
+        status = "okay";
+    };
+};
 ```
 
-**Caution:** Can cause clipping with high-level sources
+**Purpose:** Creates an ALSA sound card device.
+
+**Properties:**
+- `compatible = "hifiberry,hifiberry-dacplus"` - Loads HiFiBerry DAC+ sound driver
+- `i2s-controller = <&i2s_clk_consumer>` - Links to I2S interface
+
+**This creates the ALSA card:**
+```bash
+$ cat /proc/asound/cards
+ 0 [sndrpihifiberry]: HifiberryDacp - snd_rpi_hifiberry_dacplus
+                      snd_rpi_hifiberry_dacplus
+```
+
+## Available Parameters (__overrides__)
+
+### 1. 24db_digital_gain
+
+**Type:** Boolean
+**Default:** Off (disabled)
+**Usage:** `dtoverlay=hifiberry-amp100,24db_digital_gain`
+
+**What it does:**
+- Enables 24dB digital gain in PCM5122
+- Increases digital signal level before DAC conversion
+- Useful if input signal is too quiet
+
+**When to use:**
+- When you need more volume headroom
+- When source material is mastered at low levels
+
+**When NOT to use:**
+- With normal/loud source material (can cause clipping)
+- If you have sufficient volume without it
+
+### 2. slave
+
+**Type:** Boolean + Retargeting
+**Default:** Off (consumer mode)
+**Usage:** `dtoverlay=hifiberry-amp100,slave`
+
+**What it does:**
+```dts
+slave = <&hifiberry_dacplus>,"hifiberry-dacplus,slave?",
+        <&frag1>,"target:0=",<&i2s_clk_producer>,
+        <&hifiberry_dacplus>,"i2s-controller:0=",<&i2s_clk_producer>;
+```
+
+- Switches I2S to producer mode (Pi generates clocks)
+- Retargets fragment@1 to `i2s_clk_producer` instead of `i2s_clk_consumer`
+- Sets `hifiberry-dacplus,slave` property on sound card
+
+**When to use:**
+- When using external master clock
+- When chaining multiple DACs
+- Advanced use cases only
+
+**Standard HiFiBerry AMP100 does NOT need this parameter** (uses consumer mode).
 
 ### 3. leds_off
 
-**Type:** Boolean  
-**Default:** false  
-**Purpose:** Disable status LEDs
+**Type:** Boolean
+**Default:** Off (LEDs enabled)
+**Usage:** `dtoverlay=hifiberry-amp100,leds_off`
 
-**Usage:**
-```ini
-dtoverlay=hifiberry-amp100,leds_off
-```
+**What it does:**
+- Disables status LEDs on HiFiBerry board
+- Sets `hifiberry-dacplus,leds_off` property
 
-### 4. mute_ext_ctl
+**When to use:**
+- When you don't want LED light pollution
+- In dark environments (home theater)
+- To save minimal power
 
-**Type:** Integer (GPIO number)  
-**Default:** none  
-**Purpose:** Use external GPIO for mute control
+## Parameters That Do NOT Exist in Upstream Overlay
 
-**Usage:**
-```ini
-dtoverlay=hifiberry-amp100,mute_ext_ctl=14
-```
+### auto_mute (Custom Addition)
 
-**Note:** Can conflict with other devices using same GPIO
+**NOT in upstream `hifiberry-dacplus-overlay.dts`**
 
----
+**Where it exists:**
+- `hifiberry-amp100-pi5-dsp-reset.dts` (custom)
+- `hifiberry-amp100-pi5-overlay.dts` (custom)
+- `ghettoblaster-unified.dts` (custom)
 
-## Fragment Breakdown
+**Usage:** `dtoverlay=hifiberry-amp100-custom,auto_mute`
 
-### Simple Overlay (`ghettoblaster-amp100.dts`)
+**What it does:**
+- Enables automatic muting of amplifier after silence period
+- Reduces noise and saves power
+- Typically triggers after 2-3 seconds of silence
 
-**fragment@0: I2C Configuration**
+**Implementation in custom overlays:**
 ```dts
+__overrides__ {
+    auto_mute = <&sound>,"hifiberry-dacplus,auto_mute?";
+};
+```
+
+### mute_ext_ctl (Custom Addition)
+
+**NOT in upstream overlay**
+
+**Where it exists:**
+- `hifiberry-amp100-pi5-dsp-reset.dts` (custom)
+- `hifiberry-amp100-pi5-overlay.dts` (custom)
+- `ghettoblaster-unified.dts` (custom)
+
+**Usage:** `dtoverlay=hifiberry-amp100-custom,mute_ext_ctl=4`
+
+**What it does:**
+- Sets GPIO pin for external mute control
+- Allows hardware mute via GPIO
+
+**Example:**
+```dts
+__overrides__ {
+    mute_ext_ctl = <&sound>,"hifiberry-dacplus,mute_ext_ctl:0";
+};
+```
+
+## Pi 5 Compatibility
+
+### Upstream Overlay (Works on Pi 5)
+
+The upstream `hifiberry-dacplus` overlay uses symbolic references that work across Pi models:
+
+```dts
+target = <&i2s_clk_consumer>;
 target = <&i2c1>;
-```
-- Sets I2C clock to 100kHz (stable)
-- Configures PCM5122 at address 0x4d
-- Assigns power supplies
-
-**fragment@1: Sound Card**
-```dts
 target = <&sound>;
 ```
-- Creates sound card
-- Links to I2S controller
-- Sets compatible string
 
-**Limitations:**
-- No `__overrides__` section
-- Parameters not configurable
-- Fixed configuration only
+These are resolved by `__fixups__` at boot time to the correct hardware paths for each Pi model.
 
-### Advanced Overlay (`hifiberry-amp100-pi5-dsp-reset.dts`)
+**On Pi 5:**
+- `i2s_clk_consumer` → `/axi/pcie@1000120000/rp1/i2s@a4000`
+- `i2c1` → `/axi/pcie@1000120000/rp1/i2c@74000`
 
-**fragment@0: Clock Generator**
+### Custom Pi 5 Overlays (Explicit Paths)
+
+Custom overlays for Pi 5 use explicit hardware paths:
+
 ```dts
-target-path = "/";
-```
-- Creates `dacpro_osc` clock source
-- Required for DAC operation
+compatible = "brcm,bcm2712";  // Pi 5 only
 
-**fragment@1: I2S Enable**
-```dts
-target-path = "/axi/pcie@1000120000/rp1/i2s@a4000";
+target-path = "/axi/pcie@1000120000/rp1/i2s@a4000";  // Explicit I2S path
+target-path = "/axi/pcie@1000120000/rp1/i2c@74000";  // Explicit I2C path
 ```
-- Pi 5 specific I2S path
-- Enables DesignWare I2S controller
 
-**fragment@2: I2C Device**
-```dts
-target = <&i2c1>;
-```
-- Same as simple overlay
-- Uses `dacpro_osc` clock
+**Advantages of explicit paths:**
+- No dependency on symbolic references
+- Guaranteed to work on Pi 5
+- Clear what hardware is being configured
 
-**fragment@3: Sound Node Creation**
-```dts
-target-path = "/axi";
+**Disadvantages:**
+- Won't work on other Pi models
+- Less flexible
+- More maintenance if hardware changes
+
+## Comparison: Upstream vs Custom Overlays
+
+| Feature | Upstream (hifiberry-dacplus) | Custom Pi 5 Variants |
+|---------|------------------------------|----------------------|
+| **Compatible with** | All Pi models | Pi 5 only |
+| **I2S targeting** | Symbolic (`<&i2s_clk_consumer>`) | Explicit path |
+| **I2C targeting** | Symbolic (`<&i2c1>`) | Explicit path |
+| **24db_digital_gain** | ✅ Yes | ✅ Yes |
+| **slave** | ✅ Yes | ❌ No (some variants) |
+| **leds_off** | ✅ Yes | ✅ Yes (some variants) |
+| **auto_mute** | ❌ No | ✅ Yes |
+| **mute_ext_ctl** | ❌ No | ✅ Yes |
+| **reset-gpio** | ❌ No | ✅ Yes (some variants) |
+| **mute-gpio** | ❌ No | ✅ Yes (some variants) |
+| **Headphone amp** | ✅ Yes (hpamp@60) | ❌ No |
+
+## Custom Overlay Variants
+
+### 1. ghettoblaster-amp100.dts (Simple)
+
+**Characteristics:**
+- Minimal overlay
+- No parameters (`__overrides__` section missing)
+- Hardcoded for Pi 5
+- No GPIO control
+
+**When to use:**
+- When you don't need any parameters
+- Simplest possible configuration
+
+### 2. hifiberry-amp100-pi5-dsp-reset.dts
+
+**Characteristics:**
+- Parameters: 24db_digital_gain, leds_off, mute_ext_ctl, auto_mute
+- Explicit I2S path
+- Creates sound node under `/axi`
+- No GPIO hardcoded (controlled via parameters)
+
+**When to use:**
+- When you need auto_mute
+- When you want flexible GPIO control via parameters
+
+### 3. hifiberry-amp100-pi5-gpio14-active-low.dts
+
+**Characteristics:**
+- Hardcoded `reset-gpio = <&gpio 14 1>` (GPIO 14, Active Low)
+- No parameters (`__overrides__` missing)
+- Explicit I2C path: `/axi/pcie@1000120000/rp1/i2c@74000`
+
+**When to use:**
+- When you need GPIO 14 for DSP reset
+- Not recommended (conflicts with other uses of GPIO 14)
+
+### 4. hifiberry-amp100-pi5-overlay.dts
+
+**Characteristics:**
+- Hardcoded GPIOs:
+  - `mute-gpio = <&gpio 4 0>`
+  - `reset-gpio = <&gpio 17 0x11>`
+- Parameters: 24db_digital_gain, leds_off, mute_ext_ctl, auto_mute
+
+**When to use:**
+- When you need both mute and reset GPIOs
+- Check GPIO conflicts first!
+
+### 5. ghettoblaster-unified.dts
+
+**Characteristics:**
+- Combines AMP100 + FT6236 touch in one overlay
+- Stable I2C: `clock-frequency = <100000>` (100kHz)
+- Parameters: auto_mute, 24db_digital_gain, leds_off, mute_ext_ctl
+- No GPIO conflicts (no reset-gpio)
+
+**When to use:**
+- When you want audio + touch in single overlay
+- Recommended for Ghettoblaster
+
+## Verification Commands
+
+### Check I2C Detection
+
+```bash
+i2cdetect -y 1
 ```
-- Creates sound node under /axi
-- Pi 5 device tree structure
-- Avoids `<&sound>` reference issues
+
+**Expected output:**
+```
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+...
+40:          -- -- -- -- -- -- -- -- -- -- -- -- -- 4d -- --
+...
+```
+
+**0x4d = PCM5122 detected**
+
+### Check Sound Card
+
+```bash
+cat /proc/asound/cards
+```
+
+**Expected output:**
+```
+ 0 [sndrpihifiberry]: HifiberryDacp - snd_rpi_hifiberry_dacplus
+                      snd_rpi_hifiberry_dacplus
+```
+
+```bash
+aplay -l
+```
+
+**Expected output:**
+```
+card 0: sndrpihifiberry [snd_rpi_hifiberry_dacplus], device 0: HiFiBerry DAC+ HiFi pcm5122-hifi-0 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+```
+
+### Check Device Tree Properties
+
+```bash
+# Check if PCM5122 is in device tree
+ls -la /sys/firmware/devicetree/base/axi/*/i2c*/pcm5122@4d/
+
+# Check clock source
+cat /sys/firmware/devicetree/base/axi/*/i2c*/pcm5122@4d/clocks
+
+# Check sound card compatible string
+cat /sys/firmware/devicetree/base/axi/sound/compatible
+# Expected: hifiberry,hifiberry-dacplus
+```
+
+### Check ALSA Controls
+
+```bash
+amixer -c 0 scontrols
+```
+
+**Expected controls:**
+```
+Simple mixer control 'DSP Program',0
+Simple mixer control 'Analogue',0
+Simple mixer control 'Analogue Playback Boost',0
+Simple mixer control 'Auto Mute',0
+Simple mixer control 'Auto Mute Mono',0
+Simple mixer control 'Auto Mute Time Left',0
+Simple mixer control 'Auto Mute Time Right',0
+Simple mixer control 'Clock Missing Period',0
+Simple mixer control 'Deemphasis',0
+Simple mixer control 'Digital',0
+Simple mixer control 'Max PCM Level',0
+Simple mixer control 'Min PCM Level',0
+```
+
+**These controls come from the PCM5122 driver, NOT device tree!**
+
+## Recommended Configuration
+
+### For Standard Ghettoblaster (Stock Overlay)
+
+```ini
+# config.txt
+dtoverlay=hifiberry-dacplus
+dtparam=i2c_arm=on
+dtparam=i2s=on
+dtparam=audio=off
+```
 
 **Advantages:**
-- Has `__overrides__` section
-- Parameters configurable
-- More flexible
+- Standard upstream overlay
+- Well tested
+- Parameters available: 24db_digital_gain, slave, leds_off
 
----
+### For Ghettoblaster with Auto-Mute (Custom Overlay)
 
-## Verification
-
-### Check if Loaded
-
-```bash
-# List loaded overlays
-vcgencmd get_config dtoverlay | grep hifiberry
-
-# Check I2C device
-i2cdetect -y 1
-# Should show: 0x4d
-
-# Check ALSA card
-cat /proc/asound/cards
-# Should show: sndrpihifiberry
-
-aplay -l
-# Should show: HifiberryDacp
-```
-
-### Test Audio Output
-
-```bash
-# Direct hardware test
-speaker-test -c 2 -t sine -f 1000 -D plughw:CARD=sndrpihifiberry,DEV=0
-
-# Check volume
-amixer -c 0 sget Digital
-# or
-amixer -c 1 sget Digital
-```
-
-### Verify Auto-Mute (if enabled)
-
-```bash
-# 1. Play audio
-aplay test.wav
-
-# 2. Stop audio
-
-# 3. Wait 3 seconds
-
-# 4. Check amplifier mute status
-# (requires multimeter or oscilloscope)
-# Measure GPIO or amplifier enable pin
-```
-
----
-
-## Integration with ALSA
-
-### ALSA Device Names
-
-**Hardware device:**
-```
-hw:CARD=sndrpihifiberry,DEV=0
-plughw:CARD=sndrpihifiberry,DEV=0
-plughw:0,0  (or plughw:1,0)
-```
-
-**NOT in device tree:**
-```
-default
-_audioout
-camilladsp
-iec958  (ALSA plugin, not hardware)
-```
-
-### ALSA Configuration Files
-
-**Device tree creates hardware:**
-- I2C device (DAC)
-- I2S interface
-- Sound card registration
-
-**ALSA configures routing:**
-- `/etc/alsa/conf.d/_audioout.conf`
-- `/etc/alsa/conf.d/camilladsp.conf`
-
-**Separate layers:**
-```
-Device Tree → Hardware Init
-ALSA Config → Software Routing
-MPD Config → Application Settings
-```
-
----
-
-## Troubleshooting
-
-### Problem: No Audio Output
-
-**Check:**
-1. Is overlay loaded? `vcgencmd get_config dtoverlay`
-2. Is I2C device detected? `i2cdetect -y 1` (should show 0x4d)
-3. Is sound card present? `cat /proc/asound/cards`
-4. Is volume unmuted? `amixer -c 0 sget Digital`
-
-**Common causes:**
-- Wrong I2C address
-- I2C bus not enabled (`dtparam=i2c_arm=on`)
-- Conflicting overlays
-- Missing power supply references
-
-### Problem: Device Not Detected on I2C
-
-**Check:**
-```bash
-# Is I2C enabled?
+```ini
+# config.txt
+dtoverlay=ghettoblaster-unified,auto_mute
 dtparam=i2c_arm=on
-
-# Check I2C bus
-ls -la /dev/i2c-*
-
-# Scan bus
-i2cdetect -y 1
+dtparam=i2s=on
+dtparam=audio=off
 ```
+
+**Advantages:**
+- Auto-mute support
+- Combined audio + touch
+- Stable I2C (100kHz)
+
+## Common Issues
+
+### Issue 1: No Sound Card Detected
+
+**Symptom:**
+```bash
+$ cat /proc/asound/cards
+--- no soundcards ---
+```
+
+**Causes:**
+1. Overlay not loaded
+2. I2S not enabled (`dtparam=i2s=on` missing)
+3. Hardware not connected
+4. I2C address wrong
+
+**Debug:**
+```bash
+# Check if overlay loaded
+vcgencmd get_config dtoverlay
+
+# Check I2C detection
+i2cdetect -y 1
+
+# Check kernel messages
+dmesg | grep -i pcm5122
+dmesg | grep -i hifiberry
+```
+
+### Issue 2: PCM5122 Not Detected on I2C
+
+**Symptom:**
+```bash
+$ i2cdetect -y 1
+# No 0x4d shown
+```
+
+**Causes:**
+1. I2C not enabled (`dtparam=i2c_arm=on` missing)
+2. Hardware not connected
+3. Wrong I2C bus
+4. I2C clock too fast (stability issue)
 
 **Fix:**
-- Enable I2C in config.txt
-- Check cable connections
-- Verify HAT is seated properly
+```ini
+# Slow down I2C clock
+dtparam=i2c_arm=on,i2c_arm_baudrate=100000
+```
 
-### Problem: Parameters Not Working
+### Issue 3: Auto-Mute Not Working
 
-**Cause:** Simple overlay has no `__overrides__` section
+**Symptom:** Amplifier doesn't mute on silence
 
-**Solution:** Use advanced overlay or compile custom overlay with parameters
+**Causes:**
+1. Using upstream overlay (doesn't have auto_mute parameter)
+2. Parameter not set: `dtoverlay=...,auto_mute` missing
+3. ALSA control not enabled
 
----
+**Fix:**
+```bash
+# Check if auto_mute property exists
+cat /sys/firmware/devicetree/base/axi/sound/hifiberry-dacplus,auto_mute
+# If file doesn't exist, overlay doesn't support auto_mute
 
-## Comparison: Simple vs Advanced
+# If property exists, check ALSA control
+amixer sset 'Auto Mute' on
+```
 
-| Feature | Simple (`ghettoblaster-amp100.dts`) | Advanced (`hifiberry-amp100-pi5-dsp-reset.dts`) |
-|---------|-------------------------------------|------------------------------------------------|
-| I2C Device | ✓ | ✓ |
-| I2S Interface | ✓ | ✓ |
-| Sound Card | ✓ | ✓ |
-| Clock Source | External `<&audio>` | Internal `dacpro_osc` |
-| Parameters | ✗ None | ✓ auto_mute, 24db_digital_gain, etc. |
-| Pi 5 Specific | Partial | Full |
-| `__overrides__` | ✗ | ✓ |
+## Summary
 
-**Recommendation:** Use advanced overlay if parameters are needed, simple overlay for fixed configuration.
+- **HiFiBerry AMP100 = HiFiBerry DAC+ with amplifier**
+- **Upstream overlay works on Pi 5** (uses symbolic references)
+- **Custom overlays add auto_mute** (not in upstream)
+- **Check overlay source for available parameters**
+- **Don't make up parameters** - they must exist in `__overrides__`
+- **Verify with i2cdetect and aplay** after loading overlay
 
----
+## References
 
-## Source Files
-
-**Custom overlays:**
-- [`custom-components/overlays/ghettoblaster-amp100.dts`](../../../custom-components/overlays/ghettoblaster-amp100.dts)
-- [`hifiberry-amp100-pi5-dsp-reset.dts`](../../../hifiberry-amp100-pi5-dsp-reset.dts)
-
-**Stock overlay:**
-- Check `/boot/firmware/overlays/hifiberry-amp100.dtbo`
-- Source: https://github.com/raspberrypi/linux/tree/rpi-6.6.y/arch/arm/boot/dts/overlays
-
----
-
-## Related Documentation
-
-- [Device Tree Overview](DEVICE_TREE_OVERVIEW.md)
-- [Master Reference](../../../WISSENSBASIS/DEVICE_TREE_MASTER_REFERENCE.md)
-- [Common Mistakes](COMMON_MISTAKES.md)
-
----
-
-**Key Takeaway:** HiFiBerry AMP100 overlay configures PCM5122 DAC hardware via I2C and I2S. Parameters like `auto_mute` exist in advanced overlays but not in simple versions. ALSA routing is separate from device tree configuration.
+- Upstream overlay: https://github.com/raspberrypi/linux/blob/rpi-6.6.y/arch/arm/boot/dts/overlays/hifiberry-dacplus-overlay.dts
+- PCM5122 datasheet: https://www.ti.com/product/PCM5122
+- HiFiBerry documentation: https://www.hifiberry.com/docs/
+- I2S specification: https://www.sparkfun.com/datasheets/BreakoutBoards/I2SBUS.pdf

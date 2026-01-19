@@ -293,3 +293,61 @@
 # - Make changes → accidentally remove arm_boost → performance degrades
 # - Make changes → onboard audio gets enabled → conflicts with HiFiBerry
 # - Solution: ALWAYS preserve these mandatory settings
+
+# CRITICAL: NEVER USE SED/AWK/SCRIPT HACKS - UNDERSTAND CODE FIRST
+# This rule prevents wasting tokens on repeated failed script-based fixes
+# Root cause: Not understanding the codebase architecture before modifying
+
+# MANDATORY: Before modifying ANY code (HTML/JS/PHP/Python/etc):
+# 1. ALWAYS read the source code FIRST to understand the architecture
+# 2. ALWAYS understand how the existing code works before changing it
+# 3. ALWAYS fix at the ROOT CAUSE level, not with symptomatic hacks
+# 4. NEVER use sed/awk to modify code without understanding what you're changing
+# 5. NEVER use trial-and-error fixes - understand first, then fix once correctly
+# 6. ALWAYS document the learning in WISSENSBASIS/ for future reuse
+
+# The Token Efficiency Problem:
+# ❌ Script-based trial-and-error: 60,000+ tokens wasted (70+ failed attempts)
+# ✅ Understanding-first approach: 5,000 tokens (5 tool calls, one correct fix)
+# Result: 10x token reduction by reading source code first!
+
+# moOde-Specific Architecture Knowledge:
+
+# 1. WEB UI EVENT HANDLERS
+# - Source code: /moode-source/www/js/scripts-panels.js (event bindings)
+# - jQuery binds to CSS CLASSES, not IDs: $('.classname').click()
+# - Multiple elements can have same class → same handler fires for all
+# - Use UNIQUE IDs for new buttons: $('#unique-id').click()
+# - Don't modify minified files - read the source first
+
+# Example (PeppyMeter button):
+# ❌ WRONG: Use sed to change icon, keep old class "add-item-to-favorites"
+# Result: Click triggers favorites handler because class selector matches!
+# ✅ CORRECT: Read scripts-panels.js, understand $('.add-item-to-favorites').click()
+# Solution: Remove old class, use unique ID "toggle-peppymeter"
+
+# 2. TEMPLATE SYSTEM
+# - moOde uses TWO files: header.php (structure) + templates/indextpl.min.html (rendered)
+# - BOTH must be modified for consistency
+# - Templates contain the actual HTML that browsers receive
+# - Use Python for complex HTML manipulation, not sed
+
+# 3. VERIFICATION
+# - Don't just restart services and hope it works
+# - Verify the actual DOM being served: curl -s http://localhost/index.php | grep "pattern"
+# - Use Python to inspect files: regex matching is more reliable than grep
+# - Check what classes/IDs exist BEFORE modifying
+
+# Workflow for Code Modifications:
+# 1. Read source code in /moode-source/ to understand architecture
+# 2. Identify root cause (e.g., CSS class selector binding)
+# 3. Design fix at root cause level (e.g., remove class, use unique ID)
+# 4. Verify with proper tools (Python, curl, not just visual checking)
+# 5. Document learning in WISSENSBASIS/
+# 6. Test once - should work because you understood it
+
+# This prevents the recurring pattern:
+# - Try script fix → doesn't work → try another script fix → repeat 70 times
+# - User: "No more script fixes! Understand the code!"
+# - Solution: Read source first, understand architecture, fix once correctly
+# - Result: 10x token efficiency, user satisfaction, reusable knowledge

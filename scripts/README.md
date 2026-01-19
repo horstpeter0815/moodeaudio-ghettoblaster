@@ -1,78 +1,55 @@
 # Scripts Directory
 
-**Purpose:** Organized scripts by category
-
-## Directory Structure
-
-```
-scripts/
-├── network/     # Network configuration scripts
-├── wizard/      # Room Correction Wizard scripts
-├── deployment/  # Deployment and SD card scripts
-├── fixes/       # One-off fix scripts
-├── setup/       # Initial setup scripts
-├── audio/       # Audio configuration scripts
-└── display/     # Display configuration scripts
-```
-
-## Usage
-
-### Network Scripts
-```bash
-cd ~/moodeaudio-cursor && ./scripts/network/SETUP_GHETTOBLASTER_WIFI_CLIENT.sh
-cd ~/moodeaudio-cursor && ./scripts/network/FIX_NETWORK_PRECISE.sh
-```
-
-### Wizard Scripts
-```bash
-cd ~/moodeaudio-cursor && ./scripts/wizard/DEPLOY_WIZARD_NOW.sh
-cd ~/moodeaudio-cursor && ./scripts/wizard/COMPLETE_WIZARD_SETUP.sh
-```
-
-### Deployment Scripts
-```bash
-cd ~/moodeaudio-cursor && ./scripts/deployment/BURN_IMAGE_TO_SD.sh
-cd ~/moodeaudio-cursor && ./scripts/deployment/deploy-simple.sh
-```
-
-### Fix Scripts
-```bash
-cd ~/moodeaudio-cursor && ./scripts/fixes/FIX_DISPLAY_NOW.sh
-cd ~/moodeaudio-cursor && ./scripts/fixes/APPLY_XINITRC_DISPLAY.sh
-```
-
-### Setup Scripts
-```bash
-cd ~/moodeaudio-cursor && ./scripts/setup/SETUP_MOODE_PI5_WEB_UI.sh
-cd ~/moodeaudio-cursor && ./scripts/setup/SETUP_ETHERNET_DHCP.sh
-```
-
-## Toolbox Integration
-
-**Preferred:** Use toolbox tools instead of direct scripts:
-
-```bash
-# Network fixes
-cd ~/moodeaudio-cursor && ./tools/fix.sh --network
-
-# Deployment
-cd ~/moodeaudio-cursor && ./tools/build.sh --deploy
-
-# Testing
-cd ~/moodeaudio-cursor && ./tools/test.sh --all
-
-# Interactive menu
-cd ~/moodeaudio-cursor && ./tools/toolbox.sh
-```
-
-## Adding New Scripts
-
-1. **Check toolbox first** - Does `tools/[category].sh` have this function?
-2. **Choose directory** - Put script in appropriate `scripts/[category]/`
-3. **Follow naming** - Use `ACTION_DESCRIPTION.sh` format
-4. **Update toolbox** - Add function to toolbox if commonly used
+**Purpose:** Production scripts for system deployment and maintenance
 
 ---
 
-**Last Updated:** January 7, 2026
+## Directory Structure
 
+### `/deployment/` - SD Card & Image Management
+- `burn-sd-fast.sh` - Quick SD card burn script
+- `burn-ghettoblaster-to-sd.sh` - Main deployment script
+- `download-and-burn-v1.0-from-github.sh` - GitHub image deployment
+
+### `/audio/` - Audio Configuration
+- `SETUP_CAMILLA_PEPPY_V1.0.sh` - CamillaDSP + PeppyMeter setup
+- Audio device configuration helpers
+
+### `/display/` - Display Configuration
+- Display orientation and resolution scripts
+- X11 configuration helpers
+
+### `/network/` - Network Tools
+- Network configuration scripts
+- Connection diagnostics
+
+### `/system/` - System Maintenance
+- `FIX_SD_CARD_COMPLETE_V1.0.sh` - Complete SD card fix
+- System health checks
+- Backup scripts
+
+---
+
+## Usage
+
+All scripts should be run with appropriate permissions:
+```bash
+# Most scripts need sudo
+sudo bash scripts/deployment/burn-sd-fast.sh
+
+# Some are user-level
+bash scripts/audio/check-audio-status.sh
+```
+
+---
+
+## Maintenance
+
+- **Keep:** Only actively used, production-ready scripts
+- **Archive:** Old debugging scripts → `.archive/`
+- **Document:** Each script should have header comments explaining purpose
+
+---
+
+**Last Updated:** 2026-01-19  
+**Version:** v1.1 (Production-ready)

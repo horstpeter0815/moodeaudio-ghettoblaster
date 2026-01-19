@@ -1,0 +1,1542 @@
+#!/bin/bash
+################################################################################
+#
+# Ghettoblaster Custom Components Integration
+#
+# - Create user 'andre'
+# - Compile custom overlays
+# - Apply worker.php patch
+# - Set permissions
+#
+# (C) 2025 Ghettoblaster Custom Build
+# License: GPLv3
+#
+################################################################################
+
+# Don't exit on error - handle errors gracefully
+set +e
+
+echo "=== GHETTOBLASTER CUSTOM COMPONENTS INTEGRATION ==="
+
+# ========================================================================
+# PATH VALIDATION
+# ========================================================================
+echo "=== VALIDATING PATHS ==="
+
+# Check if workspace is available (optional - files should be copied by deploy script)
+if [ -d "/workspace" ]; then
+    echo "✅ /workspace directory exists"
+    # Verify critical directories exist
+    for dir in "/workspace/moode-source" "/workspace/custom-components" "/workspace/v1.0-config-export"; do
+        if [ -d "$dir" ]; then
+            echo "✅ Found: $dir"
+        else
+            echo "⚠️  WARNING: $dir not found (may be optional)"
+        fi
+    done
+else
+    echo "⚠️  /workspace not mounted in chroot (this is normal - files should be copied by deploy script)"
+    echo "   Continuing with files already copied to rootfs..."
+fi
+
+echo ""
+
+################################################################################
+# Create user 'andre'
+################################################################################
+
+echo "Creating user 'andre' with UID 1000 (CRITICAL - moOde requires UID 1000)..."
+# #region agent log
+DEBUG_LOG="/tmp/debug.log"
+echo '{"id":"log_'$(date +%s)'_1","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:25","message":"Checking if andre user exists","data":{"checkingUser":"andre"},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}' >> "$DEBUG_LOG" 2>/dev/null || true
+# #endregion
+if ! id -u andre >/dev/null 2>&1; then
+    # #region agent log
+    echo '{"id":"log_'$(date +%s)'_2","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:27","message":"User andre does not exist, creating","data":{"action":"createUser"},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}' >> "$DEBUG_LOG" 2>/dev/null || true
+    # #endregion
+    # CRITICAL: moOde requires user with UID:GID 1000:1000
+    # Check if UID 1000 is already taken
+    # #region agent log
+    UID_1000_USER=$(getent passwd 1000 | cut -d: -f1 2>/dev/null || echo "")
+    echo '{"id":"log_'$(date +%s)'_3","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:32","message":"Checking if UID 1000 is available","data":{"uid1000User":"'$UID_1000_USER'"},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}' >> "$DEBUG_LOG" 2>/dev/null || true
+    # #endregion
+    # Create user with specific UID 1000 and GID 1000
+    # #region agent log
+    echo '{"id":"log_'$(date +%s)'_4","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:35","message":"Before useradd command","data":{"action":"useradd","uid":1000,"gid":1000},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}' >> "$DEBUG_LOG" 2>/dev/null || true
+    # #endregion
+    useradd -m -s /bin/bash -u 1000 -g 1000 andre 2>/dev/null || {
+        # #region agent log
+        echo '{"id":"log_'$(date +%s)'_5","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:37","message":"useradd failed, attempting groupadd first","data":{"error":"useraddFailed"},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}' >> "$DEBUG_LOG" 2>/dev/null || true
+        # #endregion
+        # If group 1000 doesn't exist, create it first
+        groupadd -g 1000 andre 2>/dev/null || true
+        # #region agent log
+        echo '{"id":"log_'$(date +%s)'_6","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:40","message":"After groupadd, retrying useradd","data":{"action":"retryUseradd"},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}' >> "$DEBUG_LOG" 2>/dev/null || true
+        # #endregion
+        useradd -m -s /bin/bash -u 1000 -g 1000 andre
+    }
+    # #region agent log
+    CREATED_UID=$(id -u andre 2>/dev/null || echo "FAILED")
+    echo '{"id":"log_'$(date +%s)'_7","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:44","message":"After useradd, checking created UID","data":{"createdUID":"'$CREATED_UID'"},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}' >> "$DEBUG_LOG" 2>/dev/null || true
+    # #endregion
+    usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre 2>/dev/null || \
+    usermod -aG audio,video,sudo andre 2>/dev/null || true
+    # Set password for andre (CRITICAL FIX)
+    # Read password from test-password.txt if available
+    if [ -f "/workspace/test-password.txt" ]; then
+        PASSWORD=$(cat /workspace/test-password.txt | tr -d '\n\r')
+    else
+        PASSWORD="0815"  # Pi password
+    fi
+    echo "andre:$PASSWORD" | chpasswd 2>/dev/null || true
+    echo "✅ User 'andre' created with UID 1000 and password"
+    
+    # CRITICAL FIX: Remove pi user if it exists to prevent username reset issues
+    if id -u pi >/dev/null 2>&1; then
+        echo "Removing pi user to prevent username reset conflicts..."
+        pkill -u pi 2>/dev/null || true
+        sleep 1
+        userdel -r pi 2>/dev/null || true
+        rm -rf /home/pi 2>/dev/null || true
+        echo "✅ pi user removed"
+    fi
+else
+    echo "⚠️  User 'andre' already exists"
+    # #region agent log
+    echo '{"id":"log_'$(date +%s)'_8","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:56","message":"User andre already exists, checking UID","data":{"action":"checkExistingUID"},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}' >> "$DEBUG_LOG" 2>/dev/null || true
+    # #endregion
+    # Ensure UID is 1000 (CRITICAL)
+    CURRENT_UID=$(id -u andre)
+    # #region agent log
+    echo '{"id":"log_'$(date +%s)'_9","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:60","message":"Current UID of existing andre user","data":{"currentUID":"'$CURRENT_UID'","expectedUID":1000},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}' >> "$DEBUG_LOG" 2>/dev/null || true
+    # #endregion
+    if [ "$CURRENT_UID" != "1000" ]; then
+        echo "⚠️  User 'andre' has UID $CURRENT_UID, but moOde requires UID 1000"
+        echo "⚠️  Attempting to fix UID..."
+        # #region agent log
+        UID_1000_USER=$(getent passwd 1000 | cut -d: -f1 2>/dev/null || echo "")
+        echo '{"id":"log_'$(date +%s)'_10","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:65","message":"UID mismatch detected, checking if UID 1000 is available","data":{"currentUID":"'$CURRENT_UID'","uid1000User":"'$UID_1000_USER'"},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}' >> "$DEBUG_LOG" 2>/dev/null || true
+        # #endregion
+        # This is tricky - we may need to delete and recreate
+        # Check if UID 1000 is available
+        if [ -z "$UID_1000_USER" ]; then
+            # #region agent log
+            echo '{"id":"log_'$(date +%s)'_11","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:70","message":"UID 1000 is available, attempting usermod","data":{"action":"usermodUID"},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}' >> "$DEBUG_LOG" 2>/dev/null || true
+            # #endregion
+            usermod -u 1000 andre 2>/dev/null && {
+                # usermod succeeded
+                # #region agent log
+                echo '{"id":"log_'$(date +%s)'_11a","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:103","message":"usermod succeeded","data":{"action":"usermodSuccess"},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}' >> "$DEBUG_LOG" 2>/dev/null || true
+                # #endregion
+            } || {
+                # #region agent log
+                echo '{"id":"log_'$(date +%s)'_12","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:107","message":"usermod failed, attempting delete and recreate","data":{"error":"usermodFailed"},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}' >> "$DEBUG_LOG" 2>/dev/null || true
+                # #endregion
+                # usermod failed, delete and recreate
+                userdel -r andre 2>/dev/null || true
+                # #region agent log
+                echo '{"id":"log_'$(date +%s)'_13","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:111","message":"After userdel, recreating user","data":{"action":"recreateUser"},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}' >> "$DEBUG_LOG" 2>/dev/null || true
+                # #endregion
+                groupadd -g 1000 andre 2>/dev/null || true
+                useradd -m -s /bin/bash -u 1000 -g 1000 andre
+                # #region agent log
+                RECREATED_UID=$(id -u andre 2>/dev/null || echo "FAILED")
+                echo '{"id":"log_'$(date +%s)'_14","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:116","message":"After recreate, checking UID","data":{"recreatedUID":"'$RECREATED_UID'"},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}' >> "$DEBUG_LOG" 2>/dev/null || true
+                # #endregion
+            }
+            # After fix (usermod or recreate), ensure password and groups are set
+            # #region agent log
+            echo '{"id":"log_'$(date +%s)'_16a","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:120","message":"Setting password and groups after UID fix","data":{"action":"postFixSetup"},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}' >> "$DEBUG_LOG" 2>/dev/null || true
+            # #endregion
+            if [ -f "/workspace/test-password.txt" ]; then
+                PASSWORD=$(cat /workspace/test-password.txt | tr -d '\n\r')
+            elif [ -f "/usr/local/share/v1.0-config/test-password.txt" ]; then
+                PASSWORD=$(cat /usr/local/share/v1.0-config/test-password.txt | tr -d '\n\r')
+            else
+                PASSWORD="0815"  # Pi password
+            fi
+            echo "andre:$PASSWORD" | chpasswd 2>/dev/null || true
+            usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre 2>/dev/null || \
+            usermod -aG audio,video,sudo andre 2>/dev/null || true
+        else
+            # #region agent log
+            echo '{"id":"log_'$(date +%s)'_15","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:131","message":"UID 1000 is taken by another user, removing that user first","data":{"uid1000User":"'$UID_1000_USER'","action":"removeConflictingUser"},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}' >> "$DEBUG_LOG" 2>/dev/null || true
+            # #endregion
+            echo "⚠️  UID 1000 is already taken by user: $UID_1000_USER"
+            echo "⚠️  Removing conflicting user and fixing andre UID..."
+            # Remove the user that has UID 1000 (likely 'pi')
+            pkill -u "$UID_1000_USER" 2>/dev/null || true
+            sleep 1
+            userdel -r "$UID_1000_USER" 2>/dev/null || true
+            rm -rf "/home/$UID_1000_USER" 2>/dev/null || true
+            # Now try to fix andre UID
+            usermod -u 1000 andre 2>/dev/null || {
+                userdel -r andre 2>/dev/null || true
+                groupadd -g 1000 andre 2>/dev/null || true
+                useradd -m -s /bin/bash -u 1000 -g 1000 andre
+            }
+            # Set password and groups
+            if [ -f "/workspace/test-password.txt" ]; then
+                PASSWORD=$(cat /workspace/test-password.txt | tr -d '\n\r')
+            elif [ -f "/usr/local/share/v1.0-config/test-password.txt" ]; then
+                PASSWORD=$(cat /usr/local/share/v1.0-config/test-password.txt | tr -d '\n\r')
+            else
+                PASSWORD="0815"  # Pi password
+            fi
+            echo "andre:$PASSWORD" | chpasswd 2>/dev/null || true
+            usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre 2>/dev/null || \
+            usermod -aG audio,video,sudo andre 2>/dev/null || true
+            # #region agent log
+            FIXED_UID_AFTER_REMOVE=$(id -u andre 2>/dev/null || echo "FAILED")
+            echo '{"id":"log_'$(date +%s)'_15a","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:150","message":"After removing conflicting user, andre UID","data":{"fixedUID":"'$FIXED_UID_AFTER_REMOVE'"},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}' >> "$DEBUG_LOG" 2>/dev/null || true
+            # #endregion
+        fi
+        # #region agent log
+        FIXED_UID=$(id -u andre 2>/dev/null || echo "FAILED")
+        echo '{"id":"log_'$(date +%s)'_16","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:155","message":"After UID fix attempt, final UID","data":{"finalUID":"'$FIXED_UID'"},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}' >> "$DEBUG_LOG" 2>/dev/null || true
+        # #endregion
+    else
+        # #region agent log
+        echo '{"id":"log_'$(date +%s)'_17","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:92","message":"Existing user has correct UID 1000","data":{"uid":1000},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}' >> "$DEBUG_LOG" 2>/dev/null || true
+        # #endregion
+    fi
+    usermod -aG sudo andre 2>/dev/null || true
+    # Set password if not set
+    # Read password from test-password.txt if available
+    if [ -f "/workspace/test-password.txt" ]; then
+        PASSWORD=$(cat /workspace/test-password.txt | tr -d '\n\r')
+    else
+        PASSWORD="0815"  # Pi password
+    fi
+    echo "andre:$PASSWORD" | chpasswd 2>/dev/null || true
+fi
+
+# CRITICAL: Verify UID is 1000
+# #region agent log
+echo '{"id":"log_'$(date +%s)'_18","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:95","message":"Starting UID verification","data":{"action":"verifyUID"},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}' >> "$DEBUG_LOG" 2>/dev/null || true
+# #endregion
+ANDRE_UID=$(id -u andre 2>/dev/null || echo "0")
+# #region agent log
+echo '{"id":"log_'$(date +%s)'_19","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:98","message":"UID verification result","data":{"andreUID":"'$ANDRE_UID'","expectedUID":1000,"match":'$([ "$ANDRE_UID" = "1000" ] && echo "true" || echo "false")'},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}' >> "$DEBUG_LOG" 2>/dev/null || true
+# #endregion
+if [ "$ANDRE_UID" = "1000" ]; then
+    echo "✅ User 'andre' has correct UID 1000 (moOde compatible)"
+    # #region agent log
+    echo '{"id":"log_'$(date +%s)'_20","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:102","message":"UID verification PASSED","data":{"uid":1000},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}' >> "$DEBUG_LOG" 2>/dev/null || true
+    # #endregion
+else
+    echo "❌ ERROR: User 'andre' has UID $ANDRE_UID, but moOde requires UID 1000"
+    echo "❌ moOde will show 'System doesn't contain a user ID' error"
+    # #region agent log
+    echo '{"id":"log_'$(date +%s)'_21","timestamp":'$(date +%s000)',"location":"stage3_03-ghettoblaster-custom_00-run-chroot.sh:107","message":"UID verification FAILED","data":{"actualUID":"'$ANDRE_UID'","expectedUID":1000},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}' >> "$DEBUG_LOG" 2>/dev/null || true
+    # #endregion
+fi
+
+# Add andre to sudoers (CRITICAL FIX)
+echo "Adding 'andre' to sudoers..."
+echo "andre ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/andre 2>/dev/null || true
+chmod 0440 /etc/sudoers.d/andre 2>/dev/null || true
+echo "✅ User 'andre' added to sudoers"
+
+################################################################################
+# Compile custom overlays
+################################################################################
+
+echo "Compiling custom overlays..."
+OVERLAYS_DIR="/boot/firmware/overlays"
+
+# Check if dtc is available
+if ! command -v dtc &> /dev/null; then
+    echo "⚠️  dtc not found, overlays will be compiled on first boot"
+else
+    # Compile FT6236 overlay
+    if [ -f "$OVERLAYS_DIR/ghettoblaster-ft6236.dts" ]; then
+        dtc -@ -I dts -O dtb -o "$OVERLAYS_DIR/ghettoblaster-ft6236.dtbo" \
+            "$OVERLAYS_DIR/ghettoblaster-ft6236.dts" 2>/dev/null && \
+            echo "✅ FT6236 overlay compiled" || \
+            echo "⚠️  FT6236 overlay compilation failed"
+    fi
+
+    # Compile AMP100 overlay
+    if [ -f "$OVERLAYS_DIR/ghettoblaster-amp100.dts" ]; then
+        dtc -@ -I dts -O dtb -o "$OVERLAYS_DIR/ghettoblaster-amp100.dtbo" \
+            "$OVERLAYS_DIR/ghettoblaster-amp100.dts" 2>/dev/null && \
+            echo "✅ AMP100 overlay compiled" || \
+            echo "⚠️  AMP100 overlay compilation failed"
+    fi
+fi
+
+################################################################################
+# Apply worker.php patch
+################################################################################
+
+echo "Applying worker.php patch..."
+WORKER_FILE="/var/www/daemon/worker.php"
+PATCH_SCRIPT="/usr/local/bin/worker-php-patch.sh"
+
+if [ -f "$WORKER_FILE" ] && [ -f "$PATCH_SCRIPT" ]; then
+    if ! grep -q "Ghettoblaster: display_rotate=0" "$WORKER_FILE"; then
+        bash "$PATCH_SCRIPT" 2>/dev/null || echo "⚠️  worker.php patch script execution failed (will be applied on first boot)"
+        echo "✅ worker.php patch applied"
+    else
+        echo "✅ worker.php patch already applied"
+    fi
+else
+    echo "⚠️  worker.php or patch script not found (will be applied on first boot)"
+fi
+
+################################################################################
+# Set permissions
+################################################################################
+
+echo "Setting permissions..."
+chmod +x /usr/local/bin/*.sh 2>/dev/null || true
+chown -R andre:andre /home/andre 2>/dev/null || true
+
+echo "✅ Permissions set"
+
+################################################################################
+# Install I2C stabilization scripts
+################################################################################
+
+echo "Installing I2C stabilization scripts..."
+if [ -f "/usr/local/bin/i2c-stabilize.sh" ]; then
+    chmod +x /usr/local/bin/i2c-stabilize.sh
+    echo "✅ I2C stabilization script installed"
+else
+    echo "⚠️  I2C stabilization script not found"
+fi
+
+if [ -f "/usr/local/bin/i2c-monitor.sh" ]; then
+    chmod +x /usr/local/bin/i2c-monitor.sh
+    echo "✅ I2C monitor script installed"
+else
+    echo "⚠️  I2C monitor script not found"
+fi
+
+################################################################################
+# Install I2C monitor service
+################################################################################
+
+echo "Installing I2C monitor service..."
+if [ -f "/lib/systemd/system/i2c-monitor.service" ]; then
+    systemctl enable i2c-monitor.service 2>/dev/null || true
+    echo "✅ I2C monitor service installed and enabled"
+else
+    echo "⚠️  I2C monitor service not found"
+fi
+
+################################################################################
+# Install Audio optimization script
+################################################################################
+
+echo "Installing Audio optimization script..."
+if [ -f "/usr/local/bin/audio-optimize.sh" ]; then
+    chmod +x /usr/local/bin/audio-optimize.sh
+    echo "✅ Audio optimization script installed"
+else
+    echo "⚠️  Audio optimization script not found"
+fi
+
+################################################################################
+# Install PCM5122 oversampling script
+################################################################################
+
+echo "Installing PCM5122 oversampling script..."
+if [ -f "/usr/local/bin/pcm5122-oversampling.sh" ]; then
+    chmod +x /usr/local/bin/pcm5122-oversampling.sh
+    echo "✅ PCM5122 oversampling script installed"
+else
+    echo "⚠️  PCM5122 oversampling script not found"
+fi
+
+################################################################################
+# Install Audio Chain Fix script and service
+################################################################################
+
+echo "Installing Audio Chain Fix script..."
+if [ -f "/usr/local/bin/fix-audio-chain.sh" ]; then
+    chmod +x /usr/local/bin/fix-audio-chain.sh
+    echo "✅ Audio Chain Fix script installed"
+    
+    # Enable the service
+    if [ -f "/lib/systemd/system/fix-audio-chain.service" ]; then
+        systemctl enable fix-audio-chain.service 2>/dev/null || true
+        echo "✅ Audio Chain Fix service enabled"
+    fi
+else
+    echo "⚠️  Audio Chain Fix script not found"
+fi
+
+################################################################################
+# Install PeppyMeter extended displays
+################################################################################
+
+echo "Installing PeppyMeter extended displays..."
+if [ -f "/usr/local/bin/peppymeter-extended-displays.py" ]; then
+    chmod +x /usr/local/bin/peppymeter-extended-displays.py
+    echo "✅ PeppyMeter extended displays script installed"
+else
+    echo "⚠️  PeppyMeter extended displays script not found"
+fi
+
+################################################################################
+# Install Python dependencies for Room Correction Wizard
+################################################################################
+
+echo "Installing Python dependencies for Room Correction..."
+apt-get update && apt-get install -y python3-scipy python3-soundfile python3-numpy xdotool || echo "⚠️  Some Python packages may not be available in chroot"
+
+################################################################################
+# Create directories for Room Correction
+################################################################################
+
+echo "Creating directories for Room Correction..."
+mkdir -p /var/lib/camilladsp/convolution
+mkdir -p /var/lib/camilladsp/measurements
+chmod 755 /var/lib/camilladsp/convolution
+chmod 755 /var/lib/camilladsp/measurements
+echo "✅ Room Correction directories created"
+
+################################################################################
+# Install PeppyMeter extended displays service
+################################################################################
+
+echo "Installing PeppyMeter extended displays service..."
+if [ -f "/lib/systemd/system/peppymeter-extended-displays.service" ]; then
+    # IMPORTANT: Do NOT enable this by default.
+    # It can force PeppyMeter to start outside moOde's own local_display/peppy_display logic,
+    # which is a common cause of "white screen"/overlay regressions.
+    # USER REQUEST: PeppyMeter should NEVER auto-start - it never works
+    systemctl disable peppymeter-extended-displays.service 2>/dev/null || true
+    systemctl mask peppymeter-extended-displays.service 2>/dev/null || true
+    echo "✅ PeppyMeter extended displays service installed and DISABLED (user request: never auto-start)"
+else
+    echo "⚠️  PeppyMeter extended displays service not found"
+fi
+
+################################################################################
+# Install Audio optimization service
+################################################################################
+
+echo "Installing Audio optimization service..."
+if [ -f "/lib/systemd/system/audio-optimize.service" ]; then
+    systemctl enable audio-optimize.service 2>/dev/null || true
+    echo "✅ Audio optimization service installed and enabled"
+else
+    echo "⚠️  Audio optimization service not found"
+fi
+
+################################################################################
+# COMPREHENSIVE CLOUD-INIT REMOVAL (prevents boot delays)
+################################################################################
+
+echo "=== COMPREHENSIVE CLOUD-INIT REMOVAL ==="
+
+# Method 1: Remove cloud-init package entirely (MOST EFFECTIVE)
+echo "Removing cloud-init package..."
+apt-get remove --purge cloud-init cloud-initramfs-growroot cloud-initramfs-rescuepop -y 2>/dev/null || true
+apt-get autoremove -y 2>/dev/null || true
+echo "✅ Cloud-init package removed"
+
+# Method 2: Remove all cloud-init files and directories
+echo "Removing cloud-init files..."
+rm -rf /etc/cloud 2>/dev/null || true
+rm -rf /var/lib/cloud 2>/dev/null || true
+rm -rf /usr/lib/cloud-init 2>/dev/null || true
+rm -rf /usr/bin/cloud-init* 2>/dev/null || true
+rm -rf /usr/sbin/cloud-init* 2>/dev/null || true
+echo "✅ Cloud-init files removed"
+
+# Method 3: Create systemd override (read at boot, before services start)
+echo "Creating systemd override..."
+mkdir -p /etc/systemd/system/cloud-init.target.d 2>/dev/null || true
+cat > /etc/systemd/system/cloud-init.target.d/override.conf << 'EOF'
+[Unit]
+# Override cloud-init.target to make it a no-op
+# This prevents cloud-init from blocking boot
+After=
+Wants=
+Requires=
+EOF
+echo "✅ Systemd override created"
+
+# Method 4: Mask cloud-init.target directly (symlink to /dev/null)
+rm -f /etc/systemd/system/cloud-init.target 2>/dev/null || true
+ln -sf /dev/null /etc/systemd/system/cloud-init.target 2>/dev/null || true
+echo "✅ cloud-init.target masked"
+
+# Method 5: Mask all cloud-init services
+for svc in cloud-init cloud-init-local cloud-config cloud-final; do
+    rm -f /etc/systemd/system/$svc.service 2>/dev/null || true
+    ln -sf /dev/null /etc/systemd/system/$svc.service 2>/dev/null || true
+done
+echo "✅ All cloud-init services masked"
+
+# Method 6: Also disable via systemctl (backup method)
+systemctl stop cloud-init 2>/dev/null || true
+systemctl stop cloud-init-local 2>/dev/null || true
+systemctl stop cloud-config 2>/dev/null || true
+systemctl stop cloud-final 2>/dev/null || true
+systemctl disable cloud-init 2>/dev/null || true
+systemctl disable cloud-init-local 2>/dev/null || true
+systemctl disable cloud-config 2>/dev/null || true
+systemctl disable cloud-final 2>/dev/null || true
+systemctl mask cloud-init 2>/dev/null || true
+systemctl mask cloud-init-local 2>/dev/null || true
+systemctl mask cloud-config 2>/dev/null || true
+systemctl mask cloud-final 2>/dev/null || true
+systemctl mask cloud-init.target 2>/dev/null || true
+
+echo "✅ Cloud-init completely removed and disabled (package + files + override + mask)"
+
+################################################################################
+# Enable unified boot service (replaces multiple separate services)
+################################################################################
+
+echo "Enabling unified boot service..."
+if [ -f "/lib/systemd/system/00-unified-boot.service" ]; then
+    systemctl enable 00-unified-boot.service 2>/dev/null || true
+    echo "✅ 00-unified-boot.service enabled"
+else
+    echo "⚠️  00-unified-boot.service not found"
+fi
+
+################################################################################
+# Disable NetworkManager-wait-online (prevents boot blocking) - AGGRESSIVE
+################################################################################
+
+echo "=== FIXING NetworkManager-wait-online IN SOURCE CODE ==="
+# PROPER FIX: Modify the source service file, don't delete it
+# Read the source file, modify TimeoutStartSec and ExecStart, save it back
+
+# Find and fix the source service file
+for SRC_FILE in /lib/systemd/system/NetworkManager-wait-online.service /usr/lib/systemd/system/NetworkManager-wait-online.service; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source file: $SRC_FILE"
+        # Backup original
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        
+        # Modify TimeoutStartSec if it exists, or add it
+        if grep -q "^TimeoutStartSec=" "$SRC_FILE"; then
+            sed -i 's/^TimeoutStartSec=.*/TimeoutStartSec=1/' "$SRC_FILE"
+        else
+            # Add TimeoutStartSec after [Service] line
+            sed -i '/^\[Service\]/a TimeoutStartSec=1' "$SRC_FILE"
+        fi
+        
+        # Modify ExecStart to add --timeout=1 to nm-online
+        if grep -q "^ExecStart=.*nm-online" "$SRC_FILE"; then
+            # Replace nm-online command to add --timeout=1
+            sed -i 's|ExecStart=\(/usr/bin/nm-online[^ ]*\)|ExecStart=\1 --timeout=1|' "$SRC_FILE"
+            # If nm-online doesn't have -s -q, add them
+            if ! grep -q "nm-online.*-s.*-q" "$SRC_FILE"; then
+                sed -i 's|ExecStart=\(/usr/bin/nm-online\)|ExecStart=\1 -s -q --timeout=1|' "$SRC_FILE"
+            fi
+        fi
+        
+        echo "✅ Modified source file: $SRC_FILE (TimeoutStartSec=1, --timeout=1 added to nm-online)"
+    else
+        echo "⚠️  Source file not found: $SRC_FILE (may be in different location)"
+    fi
+done
+
+# Method 2: Remove ALL symlinks
+find /etc/systemd/system -type l -name "*NetworkManager-wait-online*" 2>/dev/null | xargs rm -f 2>/dev/null || true
+rm -f /etc/systemd/system/multi-user.target.wants/NetworkManager-wait-online.service 2>/dev/null || true
+rm -f /etc/systemd/system/network-online.target.wants/NetworkManager-wait-online.service 2>/dev/null || true
+rm -f /etc/systemd/system/sysinit.target.wants/NetworkManager-wait-online.service 2>/dev/null || true
+echo "✅ All symlinks removed"
+
+# Method 3: Mask service and target (highest priority - symlink to /dev/null)
+rm -f /etc/systemd/system/NetworkManager-wait-online.service 2>/dev/null || true
+rm -f /etc/systemd/system/NetworkManager-wait-online.target 2>/dev/null || true
+ln -sf /dev/null /etc/systemd/system/NetworkManager-wait-online.service 2>/dev/null || true
+ln -sf /dev/null /etc/systemd/system/NetworkManager-wait-online.target 2>/dev/null || true
+echo "✅ Services masked (symlink to /dev/null)"
+
+# Method 4: Create override (backup method)
+mkdir -p /etc/systemd/system/NetworkManager-wait-online.service.d 2>/dev/null || true
+cat > /etc/systemd/system/NetworkManager-wait-online.service.d/override.conf << 'EOF'
+[Unit]
+# Prevent NetworkManager-wait-online from blocking boot
+After=
+Wants=
+Requires=
+Conflicts=
+Before=
+
+[Service]
+ExecStart=
+ExecStart=/bin/true
+TimeoutStartSec=0
+TimeoutStopSec=0
+Type=oneshot
+RemainAfterExit=yes
+EOF
+echo "✅ Override created"
+
+# Method 5: Disable network-online.target completely (prevents waiting)
+mkdir -p /etc/systemd/system/network-online.target.d 2>/dev/null || true
+cat > /etc/systemd/system/network-online.target.d/override.conf << 'EOF'
+[Unit]
+# Make network-online immediately available (don't wait)
+After=
+Wants=
+Requires=
+Conflicts=
+Before=
+EOF
+rm -f /etc/systemd/system/network-online.target.wants/NetworkManager-wait-online.service 2>/dev/null || true
+echo "✅ network-online.target disabled"
+
+# Method 6: Disable via systemctl (if service exists)
+systemctl stop NetworkManager-wait-online.service 2>/dev/null || true
+systemctl disable NetworkManager-wait-online.service 2>/dev/null || true
+systemctl mask NetworkManager-wait-online.service 2>/dev/null || true
+systemctl mask NetworkManager-wait-online.target 2>/dev/null || true
+
+# Method 7: Also disable network-online.target
+systemctl stop network-online.target 2>/dev/null || true
+systemctl disable network-online.target 2>/dev/null || true
+
+echo "✅ NetworkManager-wait-online AGGRESSIVELY DISABLED (all methods applied)"
+
+################################################################################
+# DISABLE systemd-networkd COMPLETELY (moOde uses NetworkManager, NOT networkd)
+# CRITICAL: Must disable BEFORE network targets activate to prevent wait-online delays
+################################################################################
+
+echo ""
+echo "=== DISABLING systemd-networkd COMPLETELY (moOde uses NetworkManager) ==="
+
+# Step 1: FIX systemd-networkd service AND socket IN SOURCE CODE
+# CRITICAL: Socket files can trigger services even if service is disabled!
+# Must disable both service AND socket in source code
+
+echo "=== FIXING systemd-networkd.service IN SOURCE CODE ==="
+for SRC_FILE in /lib/systemd/system/systemd-networkd.service /usr/lib/systemd/system/systemd-networkd.service; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source file: $SRC_FILE"
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        # Disable by setting ExecStart to /bin/false
+        if grep -q "^ExecStart=" "$SRC_FILE"; then
+            sed -i 's|^ExecStart=.*|ExecStart=/bin/false|' "$SRC_FILE"
+        else
+            sed -i '/^\[Service\]/a ExecStart=/bin/false' "$SRC_FILE"
+        fi
+        echo "✅ Modified source file: $SRC_FILE (ExecStart=/bin/false)"
+    fi
+done
+
+echo ""
+echo "=== FIXING systemd-networkd.socket IN SOURCE CODE ==="
+for SRC_FILE in /lib/systemd/system/systemd-networkd.socket /usr/lib/systemd/system/systemd-networkd.socket; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source socket file: $SRC_FILE"
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        # Disable socket by removing ListenStream (prevents socket activation)
+        if grep -q "^ListenStream=" "$SRC_FILE"; then
+            sed -i '/^ListenStream=/d' "$SRC_FILE"
+        fi
+        if grep -q "^ListenDatagram=" "$SRC_FILE"; then
+            sed -i '/^ListenDatagram=/d' "$SRC_FILE"
+        fi
+        echo "✅ Modified source socket file: $SRC_FILE (removed ListenStream/Datagram)"
+    fi
+done
+
+# Also disable via systemctl (backup)
+systemctl stop systemd-networkd.service 2>/dev/null || true
+systemctl disable systemd-networkd.service 2>/dev/null || true
+systemctl stop systemd-networkd.socket 2>/dev/null || true
+systemctl disable systemd-networkd.socket 2>/dev/null || true
+systemctl mask systemd-networkd.service 2>/dev/null || true
+systemctl mask systemd-networkd.socket 2>/dev/null || true
+echo "✅ systemd-networkd.service and .socket masked and disabled"
+
+# Step 2: FIX systemd-networkd-wait-online IN SOURCE CODE (CRITICAL)
+# This is what causes the 2-minute delay - it waits for networkd which is disabled
+echo "=== FIXING systemd-networkd-wait-online.service IN SOURCE CODE ==="
+
+# PROPER FIX: Modify the source service file, don't delete it
+# Since systemd-networkd is disabled, this service will fail anyway
+# But we fix it properly by setting timeout to 1 second
+
+for SRC_FILE in /lib/systemd/system/systemd-networkd-wait-online.service /usr/lib/systemd/system/systemd-networkd-wait-online.service; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source file: $SRC_FILE"
+        # Backup original
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        
+        # Set timeout to 1 second (fails fast instead of waiting 2 minutes)
+        if grep -q "^TimeoutStartSec=" "$SRC_FILE"; then
+            sed -i 's/^TimeoutStartSec=.*/TimeoutStartSec=1/' "$SRC_FILE"
+        else
+            # Add TimeoutStartSec after [Service] line
+            sed -i '/^\[Service\]/a TimeoutStartSec=1' "$SRC_FILE"
+        fi
+        
+        echo "✅ Modified source file: $SRC_FILE (TimeoutStartSec=1)"
+    else
+        echo "⚠️  Source file not found: $SRC_FILE (may be in different location)"
+    fi
+done
+
+# Method 2: Remove ALL symlinks (prevents activation)
+find /etc/systemd/system -type l -name "*systemd-networkd-wait-online*" 2>/dev/null | xargs rm -f 2>/dev/null || true
+rm -f /etc/systemd/system/multi-user.target.wants/systemd-networkd-wait-online.service 2>/dev/null || true
+rm -f /etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service 2>/dev/null || true
+rm -f /etc/systemd/system/sysinit.target.wants/systemd-networkd-wait-online.service 2>/dev/null || true
+echo "✅ All symlinks removed"
+
+# Method 3: Mask service (highest priority - symlink to /dev/null)
+rm -f /etc/systemd/system/systemd-networkd-wait-online.service 2>/dev/null || true
+ln -sf /dev/null /etc/systemd/system/systemd-networkd-wait-online.service 2>/dev/null || true
+echo "✅ systemd-networkd-wait-online.service masked"
+
+# Method 4: Create override (force ExecStart to /bin/true with 0 timeout)
+mkdir -p /etc/systemd/system/systemd-networkd-wait-online.service.d 2>/dev/null || true
+cat > /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf << 'EOF'
+[Unit]
+After=
+Wants=
+Requires=
+Conflicts=
+Before=
+
+[Service]
+ExecStart=
+ExecStart=/bin/true
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=0
+TimeoutStopSec=0
+EOF
+echo "✅ systemd-networkd-wait-online override created (ExecStart=/bin/true, TimeoutStartSec=0)"
+
+# Method 5: Disable via systemctl
+systemctl stop systemd-networkd-wait-online.service 2>/dev/null || true
+systemctl disable systemd-networkd-wait-online.service 2>/dev/null || true
+systemctl mask systemd-networkd-wait-online.service 2>/dev/null || true
+
+echo "✅ systemd-networkd-wait-online.service COMPLETELY DISABLED"
+
+# Step 3: Ensure NetworkManager is enabled (moOde's network manager)
+echo ""
+echo "=== ENSURING NetworkManager is enabled (moOde uses NetworkManager) ==="
+systemctl enable NetworkManager.service 2>/dev/null || true
+echo "✅ NetworkManager enabled (moOde's network manager)"
+
+################################################################################
+# Disable Console on tty1 (prevent console display)
+################################################################################
+
+echo "Disabling console on tty1..."
+systemctl disable getty@tty1.service 2>/dev/null || true
+systemctl mask getty@tty1.service 2>/dev/null || true
+echo "✅ Console on tty1 disabled"
+
+################################################################################
+# REMOVED: disable-console service - service file deleted, was causing hangs
+# Console disabling removed - if needed, do it manually or differently
+
+################################################################################
+# Enable Matrix boot screen service
+################################################################################
+
+echo "Enabling matrix boot screen service..."
+if [ -f "/lib/systemd/system/matrix-boot.service" ]; then
+    systemctl enable matrix-boot.service 2>/dev/null || true
+    echo "✅ matrix-boot.service enabled"
+else
+    echo "⚠️  matrix-boot.service not found"
+fi
+
+################################################################################
+# Install fix-ssh-sudoers service (CRITICAL - runs on every boot)
+################################################################################
+
+# DISABLED: fix-ssh-sudoers service - sudoers already set during build (lines 210, 616)
+echo "Skipping fix-ssh-sudoers service (sudoers already set during build)"
+systemctl disable fix-ssh-sudoers.service 2>/dev/null || true
+
+################################################################################
+# DISABLED: enable-ssh-early service - 00-unified-boot handles SSH
+echo "Skipping enable-ssh-early service (00-unified-boot handles SSH)"
+systemctl disable enable-ssh-early.service 2>/dev/null || true
+
+################################################################################
+# Install fix-user-id service (CRITICAL - moOde requires UID 1000)
+################################################################################
+
+echo "Installing fix-user-id service..."
+if [ -f "/lib/systemd/system/fix-user-id.service" ]; then
+    systemctl enable fix-user-id.service 2>/dev/null || true
+    echo "✅ fix-user-id service installed and enabled"
+else
+    echo "⚠️  fix-user-id service not found"
+fi
+
+################################################################################
+# Enable localdisplay service
+################################################################################
+
+echo "Enabling localdisplay service..."
+if [ -f "/lib/systemd/system/localdisplay.service" ]; then
+    # USER REQUEST: Do NOT auto-start PeppyMeter - it never works
+    # localdisplay service may start PeppyMeter, so we disable it
+    systemctl disable localdisplay.service 2>/dev/null || true
+    echo "✅ localdisplay service DISABLED (user request: PeppyMeter should not auto-start)"
+else
+    echo "⚠️  localdisplay service not found"
+fi
+
+################################################################################
+# SIMPLE SSH ENABLE (Raspberry Pi OS Style - Easy to Maintain)
+################################################################################
+
+echo "=== SIMPLE SSH ENABLE (Raspberry Pi OS Style) ==="
+
+# Step 0: CRITICAL - Ensure user exists (moOde requires UID 1000 for SSH/web terminal)
+echo "CRITICAL: Verifying user exists before enabling SSH..."
+if ! id andre &>/dev/null; then
+    echo "⚠️  User 'andre' does not exist - creating now..."
+    groupadd -g 1000 andre 2>/dev/null || true
+    useradd -m -s /bin/bash -u 1000 -g 1000 andre 2>/dev/null || true
+    usermod -aG audio,video,spi,i2c,gpio,plugdev,sudo andre 2>/dev/null || true
+    # Read password from test-password.txt if available, otherwise use 0815
+    if [ -f "/workspace/test-password.txt" ]; then
+        PASSWORD=$(cat /workspace/test-password.txt | tr -d '\n\r')
+    else
+        PASSWORD="0815"  # Pi password
+    fi
+    echo "andre:$PASSWORD" | chpasswd 2>/dev/null || true
+    echo "✅ User 'andre' created with UID 1000"
+else
+    ANDRE_UID=$(id -u andre)
+    if [ "$ANDRE_UID" != "1000" ]; then
+        echo "⚠️  User 'andre' has wrong UID ($ANDRE_UID) - fixing to 1000..."
+        usermod -u 1000 andre 2>/dev/null || true
+        echo "✅ User 'andre' UID fixed to 1000"
+    else
+        echo "✅ User 'andre' exists with correct UID 1000"
+    fi
+fi
+
+# Step 1: Disable all complex moOde SSH services (we'll use simple method instead)
+echo "Disabling complex moOde SSH services..."
+for svc in 01-ssh-enable.service ssh-asap.service enable-ssh-early.service ssh-ultra-early.service ssh-permanent.service ssh-watchdog.service; do
+    systemctl disable "$svc" 2>/dev/null || true
+    systemctl mask "$svc" 2>/dev/null || true
+done
+echo "✅ Complex SSH services disabled"
+
+# Step 2: Configure sshd_config (Raspberry Pi OS style - password auth enabled)
+echo "Configuring sshd_config..."
+mkdir -p /etc/ssh 2>/dev/null || true
+if [ -f /etc/ssh/sshd_config ]; then
+    # Backup original
+    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup 2>/dev/null || true
+    
+    # Enable password authentication
+    sed -i 's/#PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config 2>/dev/null || true
+    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config 2>/dev/null || true
+    if ! grep -q "^PasswordAuthentication" /etc/ssh/sshd_config; then
+        echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+    fi
+    
+    # Enable root login
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config 2>/dev/null || true
+    sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config 2>/dev/null || true
+    sed -i 's/#PermitRootLogin no/PermitRootLogin yes/' /etc/ssh/sshd_config 2>/dev/null || true
+    sed -i 's/PermitRootLogin no/PermitRootLogin yes/' /etc/ssh/sshd_config 2>/dev/null || true
+    if ! grep -q "^PermitRootLogin" /etc/ssh/sshd_config; then
+        echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+    fi
+    
+    # Ensure Port 22
+    sed -i "s/#Port 22/Port 22/" /etc/ssh/sshd_config 2>/dev/null || true
+    sed -i "s/^Port [0-9]*/Port 22/" /etc/ssh/sshd_config 2>/dev/null || true
+    
+    chmod 600 /etc/ssh/sshd_config 2>/dev/null || true
+    echo "✅ sshd_config configured (PasswordAuthentication=yes, PermitRootLogin=yes)"
+else
+    # Create minimal config if missing
+    cat > /etc/ssh/sshd_config << 'EOF'
+Port 22
+PasswordAuthentication yes
+PermitRootLogin yes
+PubkeyAuthentication yes
+EOF
+    chmod 600 /etc/ssh/sshd_config 2>/dev/null || true
+    echo "✅ sshd_config created"
+fi
+
+# Step 3: Create SSH flag file (Raspberry Pi OS standard)
+echo "Creating SSH flag file..."
+touch /boot/firmware/ssh 2>/dev/null || touch /boot/ssh 2>/dev/null || true
+echo "✅ SSH flag file created (/boot/firmware/ssh)"
+
+# Step 4: Enable SSH service (simple - just like Raspberry Pi OS)
+echo "Enabling SSH service..."
+systemctl enable ssh.service 2>/dev/null || systemctl enable sshd.service 2>/dev/null || true
+echo "✅ SSH service enabled"
+
+echo "✅ SSH configured (Raspberry Pi OS style - simple and maintainable)"
+echo "✅ User 'andre' verified/created with UID 1000 (required for moOde)"
+
+################################################################################
+# Install VNC server for remote desktop access
+################################################################################
+
+echo "Installing VNC server for remote access..."
+apt-get install -y tigervnc-standalone-server tigervnc-common 2>/dev/null || apt-get install -y tightvncserver 2>/dev/null || echo "⚠️  VNC installation failed, install manually"
+echo "✅ VNC server installed"
+
+################################################################################
+# Create log directories
+################################################################################
+
+echo "Creating log directories..."
+mkdir -p /var/log
+touch /var/log/chromium-clean.log
+touch /var/log/i2c-stabilize.log
+touch /var/log/i2c-monitor.log
+chmod 666 /var/log/chromium-clean.log 2>/dev/null || true
+chmod 666 /var/log/i2c-stabilize.log 2>/dev/null || true
+chmod 666 /var/log/i2c-monitor.log 2>/dev/null || true
+
+echo "✅ Log directories created"
+
+# FINAL FIX: Ensure sudoers is set AFTER all moOde installations
+echo "=== FINAL FIX: Sudoers and SSH ==="
+echo "andre ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andre
+chmod 0440 /etc/sudoers.d/andre
+visudo -c -f /etc/sudoers.d/andre 2>/dev/null || true
+echo "✅ Final sudoers fix applied"
+
+# SSH is already configured above (Raspberry Pi OS style - simple and maintainable)
+# No need for multiple methods - simple is better
+
+################################################################################
+# Configure WLAN (Ghettoblaster - Pre-configured)
+################################################################################
+
+echo "Configuring WLAN..."
+mkdir -p /etc/wpa_supplicant 2>/dev/null || true
+
+# Create wpa_supplicant.conf with WLAN credentials
+cat > /etc/wpa_supplicant/wpa_supplicant.conf << 'WPA_EOF'
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=DE
+
+network={
+    ssid="Martin Router King"
+    psk="06082020"
+}
+WPA_EOF
+
+chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf 2>/dev/null || true
+
+# Enable wpa_supplicant service for WLAN
+systemctl enable wpa_supplicant.service 2>/dev/null || true
+systemctl enable wpa_supplicant@wlan0.service 2>/dev/null || true
+echo "✅ WLAN configured (SSID: Martin Router King)"
+echo "✅ WLAN service enabled"
+
+################################################################################
+# Set Hostname (GhettoBlaster - CRITICAL FIX)
+################################################################################
+
+echo "Setting hostname to GhettoBlaster..."
+# Set hostname in /etc/hostname
+echo "GhettoBlaster" > /etc/hostname 2>/dev/null || true
+
+# Set hostname with hostnamectl (if available)
+if command -v hostnamectl &> /dev/null; then
+    hostnamectl set-hostname GhettoBlaster 2>/dev/null || true
+fi
+
+# Update /etc/hosts
+if ! grep -q "GhettoBlaster" /etc/hosts 2>/dev/null; then
+    sed -i 's/127.0.1.1.*/127.0.1.1\tGhettoBlaster/' /etc/hosts 2>/dev/null || \
+    echo "127.0.1.1\tGhettoBlaster" >> /etc/hosts 2>/dev/null || true
+fi
+
+echo "✅ Hostname set to GhettoBlaster"
+
+# SSH is already configured above in "SIMPLE SSH ENABLE" section (Raspberry Pi OS style)
+# This duplicate section removed - SSH setup is done once, simply
+
+# SSH is already configured above (Raspberry Pi OS style - simple and maintainable)
+# Complex moOde SSH services (01-ssh-enable, 00-unified-boot) are disabled above
+# We use simple ssh.service instead - just like Raspberry Pi OS
+
+################################################################################
+# Enable 03-network-configure.service
+################################################################################
+
+echo "Enabling 03-network-configure.service..."
+if [ -f "/lib/systemd/system/03-network-configure.service" ]; then
+    systemctl enable 03-network-configure.service 2>/dev/null || true
+    echo "✅ 03-network-configure.service enabled"
+else
+    echo "⚠️  03-network-configure.service not found"
+fi
+
+################################################################################
+# Configure Network IP (Ghettoblaster - avoid 142/143 repeater IPs)
+################################################################################
+
+echo "Configuring Network IP (avoid 142/143)..."
+# Copy network fix script
+if [ -f "/usr/local/bin/fix-network-ip.sh" ]; then
+    chmod +x /usr/local/bin/fix-network-ip.sh 2>/dev/null || true
+    # Enable network fix service
+    if [ -f "/lib/systemd/system/fix-network-ip.service" ] || [ -f "/etc/systemd/system/fix-network-ip.service" ]; then
+        # RE-ENABLED: fix-network-ip.service - now fixed with correct IP (192.168.10.2)
+        systemctl enable fix-network-ip.service 2>/dev/null || true
+        echo "✅ Network IP fix service enabled"
+    fi
+else
+    echo "⚠️  fix-network-ip.sh not found (will be created on first boot)"
+fi
+
+# Copy debug log to accessible location if it exists
+if [ -f "/tmp/debug.log" ]; then
+    # Try to copy to mounted workspace location (if available)
+    if [ -d "/workspace" ]; then
+        mkdir -p /workspace/.cursor 2>/dev/null || true
+        cp /tmp/debug.log /workspace/.cursor/debug.log 2>/dev/null || \
+        cp /tmp/debug.log /workspace/imgbuild/.cursor/debug.log 2>/dev/null || true
+    fi
+    # Always copy to local log location
+    cp /tmp/debug.log /var/log/ghettoblaster-debug.log 2>/dev/null || true
+    echo "✅ Debug log written (check /tmp/debug.log or mounted location)"
+fi
+
+################################################################################
+# Install v1.0 Working Configurations (Display, Audio, CamillaDSP, PeppyMeter)
+################################################################################
+
+echo "=== INSTALLING v1.0 WORKING CONFIGURATIONS ==="
+
+# 1. Install .xinitrc for display rotation (portrait mode, 1280x400)
+echo "Installing .xinitrc for display configuration..."
+XINITRC_SOURCE="/workspace/v1.0-config-export/.xinitrc"
+if [ ! -f "$XINITRC_SOURCE" ] && [ -d "/usr/local/share/v1.0-config" ]; then
+    # Try alternative location (if copied by deploy script)
+    XINITRC_SOURCE="/usr/local/share/v1.0-config/.xinitrc"
+fi
+if [ -f "$XINITRC_SOURCE" ]; then
+    cp "$XINITRC_SOURCE" /home/andre/.xinitrc
+    chown andre:andre /home/andre/.xinitrc
+    chmod 755 /home/andre/.xinitrc
+    echo "✅ .xinitrc installed (portrait mode, 1280x400)"
+else
+    echo "⚠️  .xinitrc not found, will use default or be set by first-boot-setup"
+fi
+
+# 1.1. Configure boot-level display rotation
+# CRITICAL: Rotation is handled by cmdline.txt video parameter (rotate=90)
+# DO NOT add display_rotate=1 or fbcon=rotate:1 - causes conflicts!
+# The stage3_03-ghettoblaster-custom_02-display-cmdline.sh already sets:
+# video=HDMI-A-1:400x1280M@60,rotate=90
+echo "✅ Display rotation handled by cmdline.txt video parameter (no config.txt changes needed)"
+
+# 2. Install ALSA configurations
+echo "Installing ALSA configurations..."
+V1_CONFIG_DIR="/workspace/v1.0-config-export"
+if [ ! -d "$V1_CONFIG_DIR" ] && [ -d "/usr/local/share/v1.0-config" ]; then
+    V1_CONFIG_DIR="/usr/local/share/v1.0-config"
+fi
+if [ -d "$V1_CONFIG_DIR" ]; then
+    mkdir -p /etc/alsa/conf.d
+    # Install critical ALSA configs
+    for conf in _audioout.conf _peppyout.conf 99-default.conf; do
+        if [ -f "$V1_CONFIG_DIR/$conf" ]; then
+            cp "$V1_CONFIG_DIR/$conf" /etc/alsa/conf.d/
+            chmod 644 /etc/alsa/conf.d/$conf
+            echo "✅ Installed $conf"
+        fi
+    done
+    echo "✅ ALSA configurations installed"
+else
+    echo "⚠️  ALSA configs not found (will be set by first-boot-setup if needed)"
+fi
+
+# 3. Install CamillaDSP configurations
+echo "Installing CamillaDSP configurations..."
+V1_CONFIG_DIR="/workspace/v1.0-config-export"
+if [ ! -d "$V1_CONFIG_DIR" ] && [ -d "/usr/local/share/v1.0-config" ]; then
+    V1_CONFIG_DIR="/usr/local/share/v1.0-config"
+fi
+if [ -d "$V1_CONFIG_DIR" ]; then
+    mkdir -p /usr/share/camilladsp/configs
+    # Install working config
+    if [ -f "$V1_CONFIG_DIR/working_config.yml" ]; then
+        cp "$V1_CONFIG_DIR/working_config.yml" /usr/share/camilladsp/working_config.yml
+        chmod 644 /usr/share/camilladsp/working_config.yml
+        echo "✅ Installed working_config.yml (Bose Wave filters)"
+    fi
+    # Install template
+    if [ -f "$V1_CONFIG_DIR/__quick_convolution__.yml" ]; then
+        cp "$V1_CONFIG_DIR/__quick_convolution__.yml" /usr/share/camilladsp/__quick_convolution__.yml
+        chmod 644 /usr/share/camilladsp/__quick_convolution__.yml
+        echo "✅ Installed __quick_convolution__.yml template"
+    fi
+    # Create symlink for Bose Wave filters
+    if [ -f "$V1_CONFIG_DIR/bose_wave_filters.yml" ]; then
+        cp "$V1_CONFIG_DIR/bose_wave_filters.yml" /usr/share/camilladsp/configs/bose_wave_filters.yml
+        # Also create symlink to working_config.yml
+        ln -sf /usr/share/camilladsp/working_config.yml /usr/share/camilladsp/configs/bose_wave_filters.yml 2>/dev/null || true
+        chmod 644 /usr/share/camilladsp/configs/bose_wave_filters.yml
+        echo "✅ Installed bose_wave_filters.yml"
+    fi
+    # Remove default filters (cleanup - only keep Bose Wave)
+    rm -f /usr/share/camilladsp/configs/V3-Flat.yml 2>/dev/null || true
+    rm -f /usr/share/camilladsp/configs/*crossfeed*.yml 2>/dev/null || true
+    rm -f /usr/share/camilladsp/configs/*headphone*.yml 2>/dev/null || true
+    echo "✅ CamillaDSP configurations installed (Bose Wave only)"
+else
+    echo "⚠️  CamillaDSP configs not found in export"
+fi
+
+# 4. Install PeppyMeter configuration
+echo "Installing PeppyMeter configuration..."
+V1_CONFIG_DIR="/workspace/v1.0-config-export"
+if [ ! -d "$V1_CONFIG_DIR" ] && [ -d "/usr/local/share/v1.0-config" ]; then
+    V1_CONFIG_DIR="/usr/local/share/v1.0-config"
+fi
+if [ -f "$V1_CONFIG_DIR/peppymeter-config.txt" ]; then
+    mkdir -p /etc/peppymeter
+    cp "$V1_CONFIG_DIR/peppymeter-config.txt" /etc/peppymeter/config.txt
+    chmod 644 /etc/peppymeter/config.txt
+    echo "✅ PeppyMeter configuration installed (blue skin, 1280x400)"
+else
+    echo "⚠️  PeppyMeter config not found in export"
+fi
+
+# 5. Configure config.txt for audio (disable HDMI audio)
+echo "Configuring /boot/firmware/config.txt for audio..."
+V1_CONFIG_DIR="/workspace/v1.0-config-export"
+if [ ! -d "$V1_CONFIG_DIR" ] && [ -d "/usr/local/share/v1.0-config" ]; then
+    V1_CONFIG_DIR="/usr/local/share/v1.0-config"
+fi
+if [ -f "$V1_CONFIG_DIR/config-txt-audio.txt" ]; then
+    # Read audio settings
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^dtparam=audio= ]]; then
+            # Remove existing audio= settings
+            sed -i '/^dtparam=audio=/d' /boot/firmware/config.txt 2>/dev/null || true
+            # Add new setting
+            echo "$line" >> /boot/firmware/config.txt
+        elif [[ "$line" =~ ^dtoverlay=.*noaudio ]]; then
+            # Remove existing noaudio overlays
+            sed -i '/dtoverlay=.*noaudio/d' /boot/firmware/config.txt 2>/dev/null || true
+            # Add new overlay
+            echo "$line" >> /boot/firmware/config.txt
+        fi
+    done < "$V1_CONFIG_DIR/config-txt-audio.txt"
+    echo "✅ config.txt audio settings configured (audio=off, noaudio overlay)"
+else
+    echo "⚠️  config.txt audio settings not found in export"
+fi
+
+# 6. Install ALSA loopback module loader
+echo "Installing ALSA loopback module loader..."
+V1_CONFIG_DIR="/workspace/v1.0-config-export"
+if [ ! -d "$V1_CONFIG_DIR" ] && [ -d "/usr/local/share/v1.0-config" ]; then
+    V1_CONFIG_DIR="/usr/local/share/v1.0-config"
+fi
+if [ -f "$V1_CONFIG_DIR/alsa-loopback.conf" ]; then
+    mkdir -p /etc/modules-load.d
+    cp "$V1_CONFIG_DIR/alsa-loopback.conf" /etc/modules-load.d/alsa-loopback.conf
+    chmod 644 /etc/modules-load.d/alsa-loopback.conf
+    echo "✅ ALSA loopback module loader installed"
+else
+    # Create default if not found
+    echo "snd-aloop" > /etc/modules-load.d/alsa-loopback.conf
+    echo "✅ ALSA loopback module loader created (default)"
+fi
+
+# 7. Apply database settings (via first-boot script)
+echo "Creating first-boot script for database configuration..."
+# Copy database settings file to image for first-boot script
+V1_CONFIG_DIR="/workspace/v1.0-config-export"
+if [ ! -d "$V1_CONFIG_DIR" ] && [ -d "/usr/local/share/v1.0-config" ]; then
+    V1_CONFIG_DIR="/usr/local/share/v1.0-config"
+fi
+if [ -f "$V1_CONFIG_DIR/database-settings.txt" ]; then
+    mkdir -p /usr/local/share/v1.0-config
+    cp "$V1_CONFIG_DIR/database-settings.txt" /usr/local/share/v1.0-config/database-settings.txt
+    chmod 644 /usr/local/share/v1.0-config/database-settings.txt
+    echo "✅ Database settings file copied to image"
+fi
+
+cat > /usr/local/bin/apply-v1.0-database-settings.sh << 'DB_EOF'
+#!/bin/bash
+# Apply v1.0 database settings on first boot
+DB="/var/local/www/db/moode-sqlite3.db"
+
+# Wait for database to be ready
+for i in {1..30}; do
+    if [ -f "$DB" ]; then
+        break
+    fi
+    sleep 1
+done
+
+if [ ! -f "$DB" ]; then
+    echo "⚠️  Database not found, skipping settings"
+    exit 0
+fi
+
+# Apply settings from copied file
+if [ -f "/usr/local/share/v1.0-config/database-settings.txt" ]; then
+    while IFS='|' read -r param value; do
+        if [ -n "$param" ] && [ -n "$value" ]; then
+            sqlite3 "$DB" "UPDATE cfg_system SET value='$value' WHERE param='$param';" 2>/dev/null || \
+            sqlite3 "$DB" "INSERT INTO cfg_system (param, value) VALUES ('$param', '$value');" 2>/dev/null || true
+        fi
+    done < /usr/local/share/v1.0-config/database-settings.txt
+    
+    # Also set MPD device to _audioout (critical)
+    sqlite3 "$DB" "UPDATE cfg_mpd SET value='_audioout' WHERE param='device';" 2>/dev/null || true
+    
+    echo "✅ v1.0 database settings applied"
+fi
+DB_EOF
+chmod +x /usr/local/bin/apply-v1.0-database-settings.sh
+
+# Create systemd service to run on first boot
+cat > /lib/systemd/system/apply-v1.0-settings.service << 'SVC_EOF'
+[Unit]
+Description=Apply v1.0 Working Configurations
+# Don't wait for network - just wait for basic system and moode service if available
+# network.target is just a marker, doesn't guarantee network is ready
+After=basic.target
+# Try to run before moode if possible, but don't block if moode not available
+Before=moode.service
+# Don't require network - if network is down, still apply settings
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/apply-v1.0-database-settings.sh
+RemainAfterExit=yes
+# Don't timeout waiting for network
+TimeoutStartSec=30
+
+[Install]
+WantedBy=multi-user.target
+SVC_EOF
+systemctl enable apply-v1.0-settings.service 2>/dev/null || true
+echo "✅ First-boot database configuration service created"
+
+echo "✅ v1.0 Working Configurations Installation Complete"
+echo "   - Display: Portrait mode (1280x400)"
+echo "   - Audio: HiFiBerry AMP100, ALSA routing configured"
+echo "   - CamillaDSP: Bose Wave filters only"
+echo "   - PeppyMeter: Blue skin, 1280x400"
+echo "   - System: HDMI audio disabled, loopback module loaded"
+
+################################################################################
+# Apply D-Bus Circular Dependency Fix
+################################################################################
+
+echo ""
+echo "=== APPLYING D-BUS CIRCULAR DEPENDENCY FIX ==="
+
+# Copy D-Bus override if it exists
+DBUS_OVERRIDE="/etc/systemd/system/dbus.service.d/fix-circular-dependency.conf"
+if [ -f "${DBUS_OVERRIDE}" ]; then
+    echo "✅ D-Bus override found: ${DBUS_OVERRIDE}"
+    # Verify it's correct
+    if grep -q "DefaultDependencies=no" "${DBUS_OVERRIDE}" && grep -q "Before=basic.target" "${DBUS_OVERRIDE}"; then
+        echo "✅ D-Bus override is correct"
+    else
+        echo "⚠️  WARNING: D-Bus override may be incorrect"
+    fi
+else
+    echo "⚠️  WARNING: D-Bus override not found at ${DBUS_OVERRIDE}"
+    echo "   This should have been copied by deploy script"
+fi
+
+# Copy basic.target override if it exists
+BASIC_OVERRIDE="/etc/systemd/system/basic.target.d/fix-no-dbus-wait.conf"
+if [ -f "${BASIC_OVERRIDE}" ]; then
+    echo "✅ basic.target override found: ${BASIC_OVERRIDE}"
+    # Verify it's correct
+    if grep -q "Wants=paths.target slices.target tmp.mount" "${BASIC_OVERRIDE}"; then
+        echo "✅ basic.target override is correct"
+    else
+        echo "⚠️  WARNING: basic.target override may be incorrect"
+    fi
+else
+    echo "⚠️  WARNING: basic.target override not found at ${BASIC_OVERRIDE}"
+    echo "   This should have been copied by deploy script"
+fi
+
+################################################################################
+# Fix multi-user.target (prevent boot blocking)
+################################################################################
+
+echo ""
+echo "=== FIXING multi-user.target IN SOURCE CODE (prevent boot block) ==="
+
+# PROPER FIX: Modify the source target file, don't use overrides
+# CRITICAL FIX: Remove network-online.target dependency from multi-user.target
+# This prevents boot from waiting for network connection
+
+for SRC_FILE in /lib/systemd/system/multi-user.target /usr/lib/systemd/system/multi-user.target; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source target file: $SRC_FILE"
+        # Backup original
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        
+        # Remove network-online.target from After= line
+        if grep -q "^After=.*network-online.target" "$SRC_FILE"; then
+            sed -i 's/network-online.target//g' "$SRC_FILE"
+            # Clean up multiple spaces
+            sed -i 's/  */ /g' "$SRC_FILE"
+            sed -i 's/^After= $/After=basic.target/' "$SRC_FILE"
+        fi
+        
+        # Remove network-online.target from Wants= line
+        if grep -q "^Wants=.*network-online.target" "$SRC_FILE"; then
+            sed -i 's/network-online.target//g' "$SRC_FILE"
+            sed -i 's/  */ /g' "$SRC_FILE"
+        fi
+        
+        # Remove network-online.target from Requires= line
+        if grep -q "^Requires=.*network-online.target" "$SRC_FILE"; then
+            sed -i 's/network-online.target//g' "$SRC_FILE"
+            sed -i 's/  */ /g' "$SRC_FILE"
+        fi
+        
+        # Remove Conflicts=network-online.target (causes deadlock)
+        if grep -q "^Conflicts=.*network-online.target" "$SRC_FILE"; then
+            sed -i '/^Conflicts=.*network-online.target/d' "$SRC_FILE"
+        fi
+        
+        echo "✅ Modified source target file: $SRC_FILE (removed network-online.target dependencies)"
+    else
+        echo "⚠️  Source target file not found: $SRC_FILE (may be in different location)"
+    fi
+done
+
+# Also ensure network-online.target doesn't block (make it immediately available)
+echo ""
+echo "=== FIXING network-online.target IN SOURCE CODE ==="
+
+for SRC_FILE in /lib/systemd/system/network-online.target /usr/lib/systemd/system/network-online.target; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source target file: $SRC_FILE"
+        # Backup original
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        
+        # Remove all After= dependencies (make it immediately available)
+        if grep -q "^After=" "$SRC_FILE"; then
+            sed -i 's/^After=.*/After=/' "$SRC_FILE"
+        fi
+        
+        # Remove all Wants= dependencies
+        if grep -q "^Wants=" "$SRC_FILE"; then
+            sed -i 's/^Wants=.*/Wants=/' "$SRC_FILE"
+        fi
+        
+        # Remove all Requires= dependencies
+        if grep -q "^Requires=" "$SRC_FILE"; then
+            sed -i 's/^Requires=.*/Requires=/' "$SRC_FILE"
+        fi
+        
+        echo "✅ Modified source target file: $SRC_FILE (removed all dependencies - immediately available)"
+    else
+        echo "⚠️  Source target file not found: $SRC_FILE (may be in different location)"
+    fi
+done
+
+# Also make network.target not require network-online (fix in source)
+echo ""
+echo "=== FIXING network.target IN SOURCE CODE ==="
+
+for SRC_FILE in /lib/systemd/system/network.target /usr/lib/systemd/system/network.target; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source target file: $SRC_FILE"
+        # Backup original
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        
+        # Remove network-online.target from After=, Wants=, Requires=
+        if grep -q "^After=.*network-online.target" "$SRC_FILE"; then
+            sed -i 's/network-online.target//g' "$SRC_FILE"
+            sed -i 's/  */ /g' "$SRC_FILE"
+        fi
+        
+        if grep -q "^Wants=.*network-online.target" "$SRC_FILE"; then
+            sed -i 's/network-online.target//g' "$SRC_FILE"
+            sed -i 's/  */ /g' "$SRC_FILE"
+        fi
+        
+        if grep -q "^Requires=.*network-online.target" "$SRC_FILE"; then
+            sed -i 's/network-online.target//g' "$SRC_FILE"
+            sed -i 's/  */ /g' "$SRC_FILE"
+        fi
+        
+        echo "✅ Modified source target file: $SRC_FILE (removed network-online.target dependencies)"
+    else
+        echo "⚠️  Source target file not found: $SRC_FILE (may be in different location)"
+    fi
+done
+
+################################################################################
+# FIX systemd-resolved service AND socket IN SOURCE CODE
+# CRITICAL: Socket files can trigger services even if service is disabled!
+################################################################################
+
+echo ""
+echo "=== FIXING systemd-resolved.service AND .socket IN SOURCE CODE ==="
+
+for SRC_FILE in /lib/systemd/system/systemd-resolved.service /usr/lib/systemd/system/systemd-resolved.service; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source file: $SRC_FILE"
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        # Disable by setting ExecStart to /bin/false
+        if grep -q "^ExecStart=" "$SRC_FILE"; then
+            sed -i 's|^ExecStart=.*|ExecStart=/bin/false|' "$SRC_FILE"
+        else
+            sed -i '/^\[Service\]/a ExecStart=/bin/false' "$SRC_FILE"
+        fi
+        echo "✅ Modified source file: $SRC_FILE (ExecStart=/bin/false)"
+    fi
+done
+
+for SRC_FILE in /lib/systemd/system/systemd-resolved.socket /usr/lib/systemd/system/systemd-resolved.socket; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source socket file: $SRC_FILE"
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        # Disable socket by removing ListenStream (prevents socket activation)
+        if grep -q "^ListenStream=" "$SRC_FILE"; then
+            sed -i '/^ListenStream=/d' "$SRC_FILE"
+        fi
+        if grep -q "^ListenDatagram=" "$SRC_FILE"; then
+            sed -i '/^ListenDatagram=/d' "$SRC_FILE"
+        fi
+        echo "✅ Modified source socket file: $SRC_FILE (removed ListenStream/Datagram)"
+    fi
+done
+
+# Also disable via systemctl (backup)
+systemctl stop systemd-resolved.service 2>/dev/null || true
+systemctl disable systemd-resolved.service 2>/dev/null || true
+systemctl stop systemd-resolved.socket 2>/dev/null || true
+systemctl disable systemd-resolved.socket 2>/dev/null || true
+systemctl mask systemd-resolved.service 2>/dev/null || true
+systemctl mask systemd-resolved.socket 2>/dev/null || true
+echo "✅ systemd-resolved.service and .socket masked and disabled"
+
+################################################################################
+# Mask Unwanted Services (Audio, Avahi)
+################################################################################
+
+echo ""
+echo "=== MASKING UNWANTED SERVICES ==="
+
+# Mask audio services
+for svc in sound.target alsa-state.service alsa-restore.service; do
+    if systemctl list-unit-files | grep -q "^${svc}"; then
+        systemctl mask "${svc}" 2>/dev/null || {
+            # Fallback: create symlink to /dev/null
+            mkdir -p "/etc/systemd/system/${svc}.d" 2>/dev/null || true
+            rm -f "/etc/systemd/system/${svc}" 2>/dev/null || true
+            ln -sf /dev/null "/etc/systemd/system/${svc}" 2>/dev/null || true
+        }
+        echo "✅ Masked: ${svc}"
+    else
+        echo "⚠️  Service not found: ${svc}"
+    fi
+done
+
+# Mask Avahi services
+for svc in avahi-daemon.service avahi-daemon.socket; do
+    if systemctl list-unit-files | grep -q "^${svc}"; then
+        systemctl mask "${svc}" 2>/dev/null || {
+            rm -f "/etc/systemd/system/${svc}" 2>/dev/null || true
+            ln -sf /dev/null "/etc/systemd/system/${svc}" 2>/dev/null || true
+        }
+        echo "✅ Masked: ${svc}"
+    else
+        echo "⚠️  Service not found: ${svc}"
+    fi
+done
+
+# FIX systemd-hostnamed service AND socket IN SOURCE CODE (prevents hostname service failures)
+echo ""
+echo "=== FIXING systemd-hostnamed.service AND .socket IN SOURCE CODE ==="
+
+for SRC_FILE in /lib/systemd/system/systemd-hostnamed.service /usr/lib/systemd/system/systemd-hostnamed.service; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source file: $SRC_FILE"
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        # Disable by setting ExecStart to /bin/false
+        if grep -q "^ExecStart=" "$SRC_FILE"; then
+            sed -i 's|^ExecStart=.*|ExecStart=/bin/false|' "$SRC_FILE"
+        else
+            sed -i '/^\[Service\]/a ExecStart=/bin/false' "$SRC_FILE"
+        fi
+        echo "✅ Modified source file: $SRC_FILE (ExecStart=/bin/false)"
+    fi
+done
+
+for SRC_FILE in /lib/systemd/system/systemd-hostnamed.socket /usr/lib/systemd/system/systemd-hostnamed.socket; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source socket file: $SRC_FILE"
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        # Disable socket by removing ListenStream (prevents socket activation)
+        if grep -q "^ListenStream=" "$SRC_FILE"; then
+            sed -i '/^ListenStream=/d' "$SRC_FILE"
+        fi
+        if grep -q "^ListenDatagram=" "$SRC_FILE"; then
+            sed -i '/^ListenDatagram=/d' "$SRC_FILE"
+        fi
+        echo "✅ Modified source socket file: $SRC_FILE (removed ListenStream/Datagram)"
+    fi
+done
+
+# Also disable via systemctl (backup)
+systemctl stop systemd-hostnamed.service 2>/dev/null || true
+systemctl disable systemd-hostnamed.service 2>/dev/null || true
+systemctl stop systemd-hostnamed.socket 2>/dev/null || true
+systemctl disable systemd-hostnamed.socket 2>/dev/null || true
+systemctl mask systemd-hostnamed.service 2>/dev/null || true
+systemctl mask systemd-hostnamed.socket 2>/dev/null || true
+echo "✅ systemd-hostnamed.service and .socket masked and disabled"
+
+# FIX systemd-timesyncd.service IN SOURCE CODE (prevents time sync failures)
+echo ""
+echo "=== FIXING systemd-timesyncd.service IN SOURCE CODE ==="
+
+for SRC_FILE in /lib/systemd/system/systemd-timesyncd.service /usr/lib/systemd/system/systemd-timesyncd.service; do
+    if [ -f "$SRC_FILE" ]; then
+        echo "Found source file: $SRC_FILE"
+        cp "$SRC_FILE" "$SRC_FILE.backup" 2>/dev/null || true
+        # Disable by setting ExecStart to /bin/false
+        if grep -q "^ExecStart=" "$SRC_FILE"; then
+            sed -i 's|^ExecStart=.*|ExecStart=/bin/false|' "$SRC_FILE"
+        else
+            sed -i '/^\[Service\]/a ExecStart=/bin/false' "$SRC_FILE"
+        fi
+        echo "✅ Modified source file: $SRC_FILE (ExecStart=/bin/false)"
+    fi
+done
+
+# Also disable via systemctl (backup)
+systemctl stop systemd-timesyncd.service 2>/dev/null || true
+systemctl disable systemd-timesyncd.service 2>/dev/null || true
+systemctl mask systemd-timesyncd.service 2>/dev/null || true
+echo "✅ systemd-timesyncd.service masked and disabled"
+
+echo ""
+echo "=== GHETTOBLASTER CUSTOM COMPONENTS INTEGRATION COMPLETE ==="
+
