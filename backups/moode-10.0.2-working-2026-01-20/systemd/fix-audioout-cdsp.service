@@ -1,0 +1,13 @@
+[Unit]
+Description=Fix ALSA audioout (CamillaDSP-aware)
+After=network.target mpd.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 15
+ExecStart=/bin/bash -c 'CDSP=$(sqlite3 /var/local/www/db/moode-sqlite3.db "SELECT value FROM cfg_system WHERE param=\"camilladsp\";" 2>/dev/null); if [ "$CDSP" != "off" ] && [ -n "$CDSP" ]; then sed -i "s|^slave.pcm.*|slave.pcm \"camilladsp\"|" /etc/alsa/conf.d/_audioout.conf; else sed -i "s|^slave.pcm.*|slave.pcm \"plughw:0,0\"|" /etc/alsa/conf.d/_audioout.conf; fi'
+ExecStartPost=/bin/systemctl reload-or-restart mpd
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

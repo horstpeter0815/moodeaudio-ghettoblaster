@@ -1,0 +1,11 @@
+hdmi_scn_orient|portrait
+airplayname|Moode AirPlay
+airplaysvc|1
+alsa_output_mode|iec958
+adevname|Pi HDMI 1
+volknob|47
+amixname|PCM
+camilladsp|bose_wave_physics_optimized.yml
+local_display|1
+cardnum|empty
+camilladsp_volume_sync|on
