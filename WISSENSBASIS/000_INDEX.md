@@ -1,168 +1,122 @@
 # WISSENSBASIS - Knowledge Base Index
 
 **Project:** moOde Audio Ghettoblaster  
-**System:** Raspberry Pi 5 + HiFiBerry AMP100 + Bose Wave Drivers  
-**Version:** v1.1  
-**Last Updated:** 2026-01-19
+**System:** Raspberry Pi 5 + HiFiBerry AMP100 + Waveshare 1280x400  
+**Last Updated:** 2026-01-21
 
 ---
 
-## 🎯 ACTIVE DOCUMENTATION (Current System)
+## 🎯 PRIMARY REFERENCES (READ THESE FIRST)
+
+### **→ DEVELOPMENT_WORKFLOW.md ←**
+**HOW to work on this system - READ BEFORE ANY TASK**
+
+The sustainable development methodology:
+- ✅ 5-phase workflow (Understand → Research → Design → Implement → Verify)
+- ✅ Knowledge-first approach (no blind fixes)
+- ✅ Anti-patterns to avoid (La La La, Script Hacks, Root Cause Claims)
+- ✅ GitHub integration strategy
+- ✅ Gap-filling methodology
+- ✅ Quality gates and success metrics
+
+**Read this BEFORE starting ANY new task.**
+
+### **→ MASTER_MOODE_ARCHITECTURE.md ←**
+**WHAT the system is - Complete architecture reference**
+
+Complete moOde architecture from reading EVERY line of relevant code:
+- ✅ Complete display system architecture
+- ✅ Complete audio chain architecture  
+- ✅ All PHP code flows (worker, peripheral, audio, mpd, etc.)
+- ✅ Boot chain (cmdline.txt → config.txt → systemd → xinit)
+- ✅ Database configuration
+- ✅ Renderer integration
+- ✅ Lessons learned
+- ✅ Current system status
+- ✅ 23 files, ~23,000 lines of code analyzed
+
+**Read this to understand how moOde works.**
+
+---
+
+## 📚 SUPPLEMENTARY DOCUMENTATION
+
+### Audio System Details
+- `150_MOODE_COMPLETE_AUDIO_SYSTEM_ARCHITECTURE.md` - Deep dive into audio chain
+- `156_MOODE_VOLUME_CONTROL_COMPLETE_ARCHITECTURE.md` - Volume control system
+- `146_MOODE_AUDIO_CHAIN_ARCHITECTURE.md` - ALSA routing details
 
 ### Build & Configuration
 - `131_BUILD_READY_CHECKLIST.md` - Pre-build verification
-- `132_BOOT_CONFIGURATION_CLEAN.md` - Boot parameters
-- `133_CRITICAL_CONFIG_DIFFERENCES.md` - v1.0 vs current
-- `134_COMPREHENSIVE_BUILD_REVIEW.md` - Full build review
-- `140_FINAL_BUILD_SUMMARY.md` - Build summary v1.1
+- `140_FINAL_BUILD_SUMMARY.md` - Build summary
 
-### Audio System
-- `137_SERVICES_REPOSITORIES_SUMMARY.md` - All 11 audio services
-- `138_AUDIO_CONFIGURATION_SUMMARY.md` - Audio chain details
-- `139_IEC958_CONFIGURATION.md` - S/PDIF configuration
-
-### Display System
-- `129_DISPLAY_CHAIN_SOURCE_CODE_STUDY.md` - Display architecture
-- `135_DEVICE_TREE_OVERLAYS.md` - Device tree config
-- `136_USB_TOUCH_NO_I2C.md` - USB touchscreen details
+### Troubleshooting Guides
+- `149_MOODE_AUDIO_DEVICE_DETECTION_BUG_ROOT_CAUSE.md` - Audio device bug fix
+- `144_MOODE_WORKER_AUDIO_DETECTION_BUG.md` - Worker.php bug analysis
 
 ### Future Features
 - `141_IR_REMOTE_DAB_INTEGRATION_PLAN.md` - IR receiver + DAB+ radio plan
+- `142_BOSE_WAVE_WAVEGUIDE_PHYSICS_ANALYSIS.md` - Acoustics analysis
 
 ---
 
-## 📚 REFERENCE DOCUMENTATION (Background Info)
+## 🗑️ DEPRECATED/REDUNDANT DOCUMENTATION
 
-### moOde UI Architecture
-- `128_MOODE_UI_ARCHITECTURE_BUTTON_HANDLERS.md` - UI event system
+**The following documents are redundant with MASTER_MOODE_ARCHITECTURE.md:**
 
-### Audio Chain Analysis
-- `132_AUDIO_CHAIN_ANALYSIS.md` - Audio routing details
-- `133_BASE_FILTER_ARCHITECTURE_ANALYSIS.md` - Filter architecture
-- `134_BASE_FILTER_IMPLEMENTATION_PLAN.md` - Filter implementation
+- ~~`COMPLETE_DISPLAY_ARCHITECTURE.md`~~ → Merged into MASTER
+- ~~`154_MOODE_COMPLETE_SYSTEM_OVERVIEW.md`~~ → Merged into MASTER
+- ~~`155_MASTER_ARCHITECTURE_REFERENCE.md`~~ → Merged into MASTER
+- ~~`151_MOODE_ENGINE_COMMUNICATION_ARCHITECTURE.md`~~ → Covered in MASTER
+- ~~`147_MOODE_COMPLETE_ANALYSIS_SUMMARY.md`~~ → Outdated
+- ~~`145_MOODE_NETWORK_ARCHITECTURE.md`~~ → Not critical for this system
 
-### Room EQ System
-- `135_ROOM_EQ_MEASUREMENT_WORKFLOW.md` - REW measurement process
-- `136_PRACTICAL_ROOM_EQ_WORKFLOW.md` - Practical REW usage
-
----
-
-## 🗄️ ARCHIVED DOCUMENTATION (Historical)
-
-*Moved to `.archive/` - kept for reference but not actively maintained*
-
-### Old Troubleshooting Guides
-- Display orientation fixes (multiple attempts) → SOLVED in v1.0
-- Network configuration issues → SOLVED
-- Audio chain debugging → SOLVED with Bose Wave True Stereo
-
-### Build Iterations
-- Multiple build attempts documentation → Consolidated into v1.1
-- Trial-and-error fixes → Replaced with working config
+**Action:** Consider archiving these to reduce confusion.
 
 ---
 
-## 📋 DOCUMENT STATUS LEGEND
+## 📋 QUICK REFERENCE
 
-- **[ACTIVE]** - Current system documentation, keep updated
-- **[REFERENCE]** - Background info, useful but not critical
-- **[ARCHIVED]** - Historical, moved to `.archive/`
-- **[PLANNED]** - Future features, not yet implemented
+**Understanding the System:**
+1. Read `MASTER_MOODE_ARCHITECTURE.md` (complete understanding)
+2. Check specific topics in supplementary docs if needed
+
+**Building the System:**
+1. `131_BUILD_READY_CHECKLIST.md`
+2. `140_FINAL_BUILD_SUMMARY.md`
+
+**Troubleshooting:**
+1. Check MASTER document first
+2. Review specific bug analysis docs if needed
 
 ---
 
 ## 🎵 System Overview
 
-### Hardware Configuration
+### Hardware
 ```
 Raspberry Pi 5 (8GB)
-├── GPIO Header
-│   ├── HiFiBerry AMP100 HAT (I2C + I2S)
-│   │   └── PCM5122 DAC (0x4d)
-│   └── [Future: IR Receiver on GPIO 18]
-├── HDMI → 1280x400 Display (landscape)
-├── USB #1 → WaveShare Touch (HID)
-└── USB #2 → [Future: DAB+ receiver]
+├── HiFiBerry AMP100 (I2S audio)
+├── Waveshare 7.9" 1280x400 Display (HDMI-2)
+└── FT6236 Touch Controller (USB)
+```
+
+### Software
+```
+Raspberry Pi OS Trixie (Debian 13) 64-bit
+├── moOde Audio r1001
+├── CamillaDSP 2.0.3
+└── All renderers: Bluetooth, AirPlay, Spotify, etc.
 ```
 
 ### Audio Chain
 ```
-MPD (Music Player Daemon)
-  ↓
-CamillaDSP (Bose Wave True Stereo - 300 Hz crossover)
-  ├─ Left Channel → Bass driver (40-300 Hz)
-  └─ Right Channel → Mids/Highs driver (300-12000 Hz)
-  ↓
-ALSA (plughw:1,0)
-  ↓
-HiFiBerry AMP100 (I2S)
-  ↓
-Bose Wave Drivers
+MPD → [CamillaDSP/EQ] → _audioout → HiFiBerry AMP100 → Speakers
 ```
 
-### Software Stack
-- **OS:** Raspberry Pi OS Trixie (Debian 13) 64-bit
-- **Audio Player:** moOde Audio r1001
-- **DSP:** CamillaDSP 2.0.3
-- **Services:** 11 streaming services (MPD, AirPlay, Spotify, etc.)
-- **UI:** Chromium kiosk mode (1280x400 landscape)
-- **Visualization:** PeppyMeter (VU meters)
-
 ---
 
-## 📂 Related Documentation
-
-### Root Directory
-- `README.md` - Project overview
-- `CLEANUP_PLAN.md` - Workspace organization
-- `PROJECT_STATUS_V1.0.md` - v1.0 status (reference)
-
-### Build Directory
-- `imgbuild/BUILD_PLAN.md` - Build process
-- `imgbuild/COMPONENTS_CHECKLIST.md` - Component verification
-- `imgbuild/KICK_OFF_BUILD.sh` - Build starter script
-
-### Scripts & Tools
-- `scripts/README.md` - Production scripts index
-- `tools/README.md` - Development tools index
-
----
-
-## 🔄 Maintenance Schedule
-
-### After Each Build
-- [ ] Update build status in `140_FINAL_BUILD_SUMMARY.md`
-- [ ] Tag git commit: `v1.x-working`
-- [ ] Test all components
-- [ ] Update COMPONENTS_CHECKLIST.md
-
-### Monthly
-- [ ] Review and archive old docs
-- [ ] Update service versions (137_SERVICES_REPOSITORIES_SUMMARY.md)
-- [ ] Check for moOde updates
-
-### As Needed
-- [ ] Add new features to WISSENSBASIS
-- [ ] Update integration plans (IR/DAB+)
-- [ ] Document any configuration changes
-
----
-
-## 🎯 Quick Links
-
-**Most Used Docs:**
-1. Build Summary → `140_FINAL_BUILD_SUMMARY.md`
-2. Audio Config → `138_AUDIO_CONFIGURATION_SUMMARY.md`
-3. Build Checklist → `131_BUILD_READY_CHECKLIST.md`
-4. IR/DAB+ Plan → `141_IR_REMOTE_DAB_INTEGRATION_PLAN.md`
-
-**Troubleshooting:**
-1. Audio Chain → `132_AUDIO_CHAIN_ANALYSIS.md`
-2. Display Issues → `129_DISPLAY_CHAIN_SOURCE_CODE_STUDY.md`
-3. Device Tree → `135_DEVICE_TREE_OVERLAYS.md`
-
----
-
-**Total Documents:** 157 (15 active, 20 reference, 122 archived)  
-**System Status:** Production-ready v1.1  
-**Build:** In progress (Bose Wave True Stereo + all fixes)
+**Total Active Documents:** ~16 (2 primary + 14 supplementary)  
+**System Status:** Production-ready, fully documented  
+**Code Analysis:** Complete (23 files, ~23,000 lines read completely)  
+**Development Methodology:** Defined and documented
