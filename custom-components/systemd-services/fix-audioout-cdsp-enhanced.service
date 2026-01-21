@@ -1,0 +1,15 @@
+[Unit]
+Description=Fix ALSA audioout and CamillaDSP (Enhanced v2)
+After=network.target
+Before=mpd.service camilladsp.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 15
+ExecStart=/usr/local/bin/fix-audioout-cdsp-enhanced.sh
+ExecStartPost=/bin/systemctl reload-or-restart camilladsp
+ExecStartPost=/bin/systemctl reload-or-restart mpd
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
