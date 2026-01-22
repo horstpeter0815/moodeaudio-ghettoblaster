@@ -2,48 +2,59 @@
 
 ## Quick Steps
 
-### 1. Create Image from Your Working SD Card
+### Option 1: Automated Upload (Recommended)
 
-Run this script:
+If you already have the image file, just upload it:
+
 ```bash
 cd /Users/andrevollmer/moodeaudio-cursor/scripts/deployment
-./CREATE_WORKING_IMAGE_FROM_SD.sh
+./UPLOAD_IMAGE_TO_GITHUB.sh
 ```
 
-This will create: `~/Downloads/moode-10.2-working-YYYYMMDD.img.zip`
+This script will:
+- ✅ Find your image file automatically
+- ✅ Create GitHub repository if needed
+- ✅ Upload image as release
+- ✅ Give you the shareable link
 
-### 2. Create GitHub Repository
+**That's it!** Share the link with your friend.
 
-Go to: https://github.com/new
+### Option 2: Create Image + Upload (All-in-One)
 
-- **Repository name:** `moode-working-image`
-- **Description:** `moOde 10.2 Working Image - Complete working configuration`
-- **Visibility:** Public
-- **Initialize:** Add a README
+If you need to create the image first:
 
-Click "Create repository"
+```bash
+cd /Users/andrevollmer/moodeaudio-cursor/scripts/deployment
+./DO_EVERYTHING_CREATE_AND_UPLOAD.sh
+```
 
-### 3. Upload Image as Release
+This creates the image from SD card AND uploads to GitHub.
 
-1. Go to your new repository: https://github.com/horstpeter0815/moode-working-image
-2. Click "Releases" → "Create a new release"
-3. **Tag:** `v1.0-working`
-4. **Title:** `moOde 10.2 Working Image - Complete Setup`
-5. **Description:**
+### Option 3: Manual Upload (Web UI)
+
+1. **Create Image:**
+   ```bash
+   cd /Users/andrevollmer/moodeaudio-cursor/scripts/deployment
+   ./CREATE_WORKING_IMAGE_FROM_SD.sh
    ```
-   Complete working moOde 10.2 image ready to burn!
-   
-   Includes:
-   - Display: 1280x400 landscape, touch calibrated
-   - Audio: HiFiBerry AMP100, volume optimized
-   - Network: WiFi configured
-   - Filters: CamillaDSP ready
-   - Radio: 6 stations
-   ```
-6. **Attach file:** Drag and drop `moode-10.2-working-YYYYMMDD.img.zip`
-7. Click "Publish release"
+   This creates: `~/Downloads/moode-10.2-working-YYYYMMDD.img.zip`
 
-### 4. Share with Friend
+2. **Create GitHub Repository:**
+   - Go to: https://github.com/new
+   - **Repository name:** `moode-working-image`
+   - **Description:** `moOde 10.2 Working Image - Complete working configuration`
+   - **Visibility:** Public
+   - Click "Create repository"
+
+3. **Upload Image as Release:**
+   - Go to: https://github.com/horstpeter0815/moode-working-image
+   - Click "Releases" → "Create a new release"
+   - **Tag:** `v1.0-working`
+   - **Title:** `moOde 10.2 Working Image - Complete Setup`
+   - **Attach file:** Drag and drop `moode-10.2-working-YYYYMMDD.img.zip`
+   - Click "Publish release"
+
+### Share with Friend
 
 Send them this link:
 ```
